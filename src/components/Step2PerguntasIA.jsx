@@ -178,13 +178,13 @@ export default function Step2PerguntasIA({ data, updateForm, nextStep, prevStep,
 
   return (
     <div className="space-y-6">
-      <div className="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-4 mb-6">
+      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6">
         <div className="flex items-start">
           <div className="flex-shrink-0">
-            <span className="text-slate-900 dark:text-white text-lg">✨</span>
+            <span className="text-gray-600 text-lg">✨</span>
           </div>
           <div className="ml-3">
-            <p className="text-sm text-slate-900 dark:text-white">
+            <p className="text-sm text-gray-700">
               Antes de seguir, vou te fazer algumas perguntas para entender melhor o caso - isso me ajuda a cobrir pontos 
               que ainda não ficaram totalmente claros. Por favor, responda nos campos abaixo:
             </p>
@@ -195,13 +195,13 @@ export default function Step2PerguntasIA({ data, updateForm, nextStep, prevStep,
       <form onSubmit={handleNext} className="space-y-8">
         {perguntasIA.map((pergunta, index) => (
           <div key={pergunta.id} className="space-y-3">
-            <label className="block text-sm font-medium text-slate-900 dark:text-white">
+            <label className="block text-sm font-medium text-gray-700">
               {index + 1}. {pergunta.texto} (Opcional)
             </label>
             <textarea
               name={pergunta.id}
               rows={4}
-              className="input-primary resize-none dark:bg-gray-800 dark:text-white dark:border-gray-700 placeholder:dark:text-gray-400"
+              className="input-primary resize-none"
               value={data[pergunta.id] || ''}
               onChange={(e) => handleChange(pergunta.id, e.target.value)}
               placeholder={pergunta.placeholder}

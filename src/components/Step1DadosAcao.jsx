@@ -172,7 +172,7 @@ export default function Step1DadosAcao({ data, updateForm, nextStep, onCancel })
     <form onSubmit={handleNext} className="space-y-6">
       <div className="space-y-6">
         <div>
-          <label className="block text-xs uppercase tracking-wide text-slate-900 dark:text-white font-medium mb-2">
+          <label className="block text-xs uppercase tracking-wide text-gray-500 font-medium mb-2">
             Quais são os fatos do caso? *
           </label>
           <textarea
@@ -189,7 +189,7 @@ export default function Step1DadosAcao({ data, updateForm, nextStep, onCancel })
         </div>
         
         <div>
-          <label className="block text-xs uppercase tracking-wide text-slate-900 dark:text-white font-medium mb-2">
+          <label className="block text-xs uppercase tracking-wide text-gray-500 font-medium mb-2">
             Escreva o nome da parte que você está representando: *
           </label>
           <input
@@ -204,7 +204,7 @@ export default function Step1DadosAcao({ data, updateForm, nextStep, onCancel })
         </div>
         
         <div>
-          <label className="block text-xs uppercase tracking-wide text-slate-900 dark:text-white font-medium mb-2">
+          <label className="block text-xs uppercase tracking-wide text-gray-500 font-medium mb-2">
             Escreva o nome da parte contrária: *
           </label>
           <input
@@ -219,10 +219,10 @@ export default function Step1DadosAcao({ data, updateForm, nextStep, onCancel })
         </div>
 
         <div>
-          <label className="block text-xs uppercase tracking-wide text-slate-900 dark:text-white font-medium mb-2">
+          <label className="block text-xs uppercase tracking-wide text-gray-500 font-medium mb-2">
             Tipo de ação desejada *
           </label>
-          <div className="text-xs text-slate-700 dark:text-gray-300 mb-2">
+          <div className="text-xs text-gray-600 mb-2">
             Selecione o tipo de ação judicial que será proposta
           </div>
           <select
@@ -250,10 +250,10 @@ export default function Step1DadosAcao({ data, updateForm, nextStep, onCancel })
         </div>
 
         <div>
-          <label className="block text-xs uppercase tracking-wide text-slate-900 dark:text-white font-medium mb-2">
+          <label className="block text-xs uppercase tracking-wide text-gray-500 font-medium mb-2">
             Jurisdição aplicável *
           </label>
-          <div className="text-xs text-slate-700 dark:text-gray-300 mb-2">
+          <div className="text-xs text-gray-600 mb-2">
             Informe o Estado e a Comarca onde a ação será proposta
           </div>
           <input
@@ -268,7 +268,7 @@ export default function Step1DadosAcao({ data, updateForm, nextStep, onCancel })
         </div>
 
         <div>
-          <label className="block text-xs uppercase tracking-wide text-slate-900 dark:text-white font-medium mb-2">
+          <label className="block text-xs uppercase tracking-wide text-gray-500 font-medium mb-2">
             Objetivos principais do cliente com a ação *
           </label>
           <textarea
@@ -286,7 +286,7 @@ export default function Step1DadosAcao({ data, updateForm, nextStep, onCancel })
 
         {/* Seção de Upload de Documentos */}
         <div>
-          <label className="block text-xs uppercase tracking-wide text-slate-900 dark:text-white font-medium mb-2">
+          <label className="block text-xs uppercase tracking-wide text-gray-500 font-medium mb-2">
             Documentos (Opcional - Máximo 3 arquivos)
           </label>
           
@@ -296,7 +296,7 @@ export default function Step1DadosAcao({ data, updateForm, nextStep, onCancel })
               type="file"
               id="file-upload"
               multiple
-              accept=".pdf"
+              accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
               onChange={handleFileUpload}
               className="hidden"
             />
@@ -306,7 +306,7 @@ export default function Step1DadosAcao({ data, updateForm, nextStep, onCancel })
                 Clique para selecionar arquivos ou arraste e solte
               </p>
               <p className="text-xs text-gray-500">
-                PDF (máx. 10MB cada)
+                PDF, DOC, DOCX, JPG, PNG (máx. 10MB cada)
               </p>
             </label>
           </div>
@@ -314,7 +314,7 @@ export default function Step1DadosAcao({ data, updateForm, nextStep, onCancel })
           {/* Lista de Arquivos Enviados */}
           {data.uploadedFiles && data.uploadedFiles.length > 0 && (
             <div className="mt-4 space-y-2">
-              <p className="text-sm font-medium text-slate-900 dark:text-white">Arquivos selecionados:</p>
+              <p className="text-sm font-medium text-gray-700">Arquivos selecionados:</p>
               {data.uploadedFiles.map((file, index) => (
                 <div key={index} className="flex items-center justify-between bg-gray-50 p-3 rounded-lg">
                   <div className="flex items-center">

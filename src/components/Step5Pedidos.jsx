@@ -37,22 +37,22 @@ export default function Step5Pedidos({ data, updateForm, nextStep, prevStep }) {
     }
   };
 
-  // Carregar dados dos pedidos ao montar o componente
-  useEffect(() => {
-    const loadPedidos = async () => {
-      if (!data.pedidos) {
-        setIsLoading(true);
-        const dadosPedidos = await fetchPedidos();
-        if (dadosPedidos) {
-          setPedidos(dadosPedidos);
-          updateForm({ pedidos: dadosPedidos });
-        }
-        setIsLoading(false);
-      }
-    };
+  // Carregar dados dos pedidos ao montar o componente - REMOVIDO PARA NÃO PRÉ-PREENCHER
+  // useEffect(() => {
+  //   const loadPedidos = async () => {
+  //     if (!data.pedidos) {
+  //       setIsLoading(true);
+  //       const dadosPedidos = await fetchPedidos();
+  //       if (dadosPedidos) {
+  //         setPedidos(dadosPedidos);
+  //         updateForm({ pedidos: dadosPedidos });
+  //       }
+  //       setIsLoading(false);
+  //     }
+  //   };
 
-    loadPedidos();
-  }, []);
+  //   loadPedidos();
+  // }, []);
 
   const handleChange = (e) => {
     const value = e.target.value;
@@ -70,22 +70,22 @@ export default function Step5Pedidos({ data, updateForm, nextStep, prevStep }) {
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-300">Carregando dados dos pedidos...</p>
+          <p className="text-gray-600">Carregando dados dos pedidos...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6 bg-white dark:bg-gray-800 rounded-xl p-6 shadow border border-gray-200 dark:border-gray-700">
+    <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">Pedidos</h2>
-        <p className="text-slate-700 dark:text-gray-300">Descreva os pedidos que devem ser formulados na ação judicial.</p>
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">Pedidos</h2>
+        <p className="text-gray-600">Descreva os pedidos que devem ser formulados na ação judicial.</p>
       </div>
 
       <form onSubmit={handleNext} className="space-y-6">
         <div>
-          <label htmlFor="pedidos" className="block text-sm font-medium text-slate-900 dark:text-white mb-2">
+          <label htmlFor="pedidos" className="block text-sm font-medium text-gray-700 mb-2">
             DOS PEDIDOS *
           </label>
           <textarea
@@ -94,11 +94,11 @@ export default function Step5Pedidos({ data, updateForm, nextStep, prevStep }) {
             value={pedidos}
             onChange={handleChange}
             placeholder="Descreva os pedidos que devem ser formulados na ação judicial..."
-            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:border-gray-400 dark:focus:border-gray-500 transition-colors duration-200 resize-none bg-white dark:bg-gray-700 text-slate-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-300"
+            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:border-gray-400 transition-colors duration-200 resize-none"
             rows={15}
             required
           />
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+          <p className="mt-1 text-sm text-gray-500">
             {pedidos.length} de 5000 caracteres permitidos.
           </p>
         </div>

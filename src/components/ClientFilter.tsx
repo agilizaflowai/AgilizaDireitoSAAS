@@ -193,7 +193,15 @@ export default function ClientFilter() {
           icon={Users}
           title="Clientes Cadastrados"
           subtitle="Lista de clientes do sistema"
-        />
+        >
+          <button
+            onClick={() => alert('Funcionalidade em desenvolvimento')}
+            className="btn-primary flex items-center gap-2"
+          >
+            <Plus className="h-4 w-4" strokeWidth={1.5} />
+            Adicionar Cliente
+          </button>
+        </PageHeader>
 
       {/* Filtros e Busca */}
       <div className="card p-6">
@@ -280,6 +288,10 @@ export default function ClientFilter() {
                               <span className="font-semibold text-black dark:text-white text-sm uppercase tracking-wide">WhatsApp</span>
                             </div>
                             <div className="flex items-center space-x-2">
+                              <button className="bg-black dark:bg-gray-600 text-white px-3 py-1 rounded-md text-xs font-medium hover:bg-gray-800 dark:hover:bg-gray-500 transition-colors duration-200 flex items-center gap-1">
+                                <MessageCircle className="h-3 w-3" />
+                                Conversar
+                              </button>
                               {editingWhatsApp === client.cpfcnpj ? (
                                 <>
                                   <button
