@@ -19,33 +19,38 @@ export default function Login() {
     setError('');
 
     try {
-      // Buscar credenciais e dados do advogado
-      const { data, error: queryError } = await supabase
+      // Buscar credenciais no Supabase sem join (corrige erro PGRST200)
+      const { data: cred, error: credError } = await supabase
         .from('credenciais')
-        .select(`
-          *,
-          advogados!advogado_id (
-            nome,
-            oab,
-            uf
-          )
-        `)
+        .select('id, login, advogado_id')
         .eq('login', email)
         .eq('senha', password)
         .single();
 
-      if (queryError || !data) {
+      if (credError || !cred) {
         setError('Email ou senha incorretos');
         setIsLoading(false);
         return;
       }
 
+      // Buscar dados do advogado (consulta separada)
+      let advogado: { nome?: string; oab?: number; uf?: string } | null = null;
+      if (cred.advogado_id) {
+        const { data: advData, error: advError } = await supabase
+          .from('advogados')
+          .select('nome, oab, uf')
+          .eq('id', cred.advogado_id)
+          .single();
+        if (!advError && advData) {
+          advogado = advData as any;
+        }
+      }
+
       // Login bem-sucedido
-      const advogado = data.advogados;
       const user = {
-        id: data.id.toString(),
+        id: cred.id.toString(),
         name: advogado?.nome || 'Usuário',
-        email: data.login,
+        email: cred.login,
         oab: advogado?.oab,
         uf: advogado?.uf,
         avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80'
