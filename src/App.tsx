@@ -15,7 +15,7 @@ import FeeCalculator from './components/FeeCalculator';
 import DeadlineManagement from './components/DeadlineManagement';
 import AISupport from './components/AISupport';
 
-import FloatingButton from './components/FloatingButton';
+
 import TourModal from './components/TourModal';
 
 
@@ -78,7 +78,6 @@ function AppContent() {
           {renderCurrentPage()}
         </div>
       </Layout>
-      <FloatingButton />
       <TourModal isOpen={showTour} onClose={handleCloseTour} />
     </div>
   );

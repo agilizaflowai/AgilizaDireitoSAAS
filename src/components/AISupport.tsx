@@ -4,7 +4,7 @@ import { supabase } from '../supabaseClient';
 
 interface Message {
   id: number;
-  sender: 'client' | 'ai';
+  sender: 'client' | 'ai' | 'lawyer';
   message: string;
   timestamp: string;
   date: string;
@@ -42,9 +42,25 @@ export default function AISupport() {
   const [refreshing, setRefreshing] = useState(false);
   const [isAIActive, setIsAIActive] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const realtimeChannelRef = useRef<any>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  // Função para limpar partes específicas das mensagens
+  const cleanMessageContent = (messages: Message[]) => {
+    const isSystemNoise = (text: string) => /^workflow(\swas)?\sstarted$/i.test(text.trim());
+    return messages
+      .filter(message => !isSystemNoise(message.message || ''))
+      .map(message => ({
+        ...message,
+        message: message.message
+          .replace(/TIPO_CLIENTE=EXISTENTE/gi, '')
+          .replace(/TIPO_CLIENTE=NOVO/gi, '')
+          .replace(/\s+/g, ' ')
+          .trim()
+      }));
   };
 
   useEffect(() => {
@@ -99,9 +115,15 @@ export default function AISupport() {
         }
 
         const conversation = conversationsMap.get(sessionId)!;
+        const senderType: 'client' | 'ai' | 'lawyer' =
+          chatMessage.message.type === 'ai'
+            ? 'ai'
+            : chatMessage.message.additional_kwargs?.sender === 'lawyer'
+              ? 'lawyer'
+              : 'client';
         const message: Message = {
           id: chatMessage.id,
-          sender: chatMessage.message.type === 'human' ? 'client' : 'ai',
+          sender: senderType,
           message: chatMessage.message.content,
           timestamp: chatMessage.created_at 
             ? new Date(chatMessage.created_at).toLocaleTimeString('pt-BR', { 
@@ -213,6 +235,106 @@ export default function AISupport() {
     fetchChatMessages();
   }, []);
 
+  useEffect(() => {
+    // Assina inserts na tabela chat para atualizar em tempo real
+    const channel = supabase
+      .channel('realtime-chat')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat' }, (payload) => {
+        const chatMessage: any = payload.new;
+        if (!chatMessage) return;
+
+        const sessionId: string = chatMessage.session_id;
+        const createdAt: string = chatMessage.created_at || new Date().toISOString();
+
+        const senderType: 'client' | 'ai' | 'lawyer' =
+          chatMessage?.message?.type === 'ai'
+            ? 'ai'
+            : chatMessage?.message?.additional_kwargs?.sender === 'lawyer'
+              ? 'lawyer'
+              : 'client';
+
+        const msg: Message = {
+          id: chatMessage.id,
+          sender: senderType,
+          message: chatMessage?.message?.content ?? '',
+          timestamp: new Date(createdAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+          date: new Date(createdAt).toISOString().split('T')[0],
+        };
+
+        // Atualiza lista de conversas (com anti-duplicação da mensagem temporária)
+        setConversations((prev) => {
+          const idx = prev.findIndex((c) => c.id === sessionId);
+          if (idx === -1) {
+            const phoneNumber = (sessionId || '').replace('@s.whatsapp.net', '');
+            const newConv: Conversation = {
+              id: sessionId,
+              clientName: chatMessage?.nome_usuario || `Cliente ${phoneNumber.slice(-4)}`,
+              clientPhone: phoneNumber,
+              status: 'online',
+              lastMessage: msg.message,
+              lastMessageTime: msg.timestamp,
+              unreadCount: 0,
+              messages: [msg],
+            };
+            return [newConv, ...prev];
+          }
+
+          const updated = [...prev];
+          const conv = updated[idx];
+          const existingLast = conv.messages[conv.messages.length - 1];
+          const isTempDuplicate = existingLast && existingLast.sender === msg.sender && existingLast.message === msg.message && typeof existingLast.id === 'number' && existingLast.id > 1e11; // Date.now()
+          const newMessages = isTempDuplicate
+            ? [...conv.messages.slice(0, -1), msg]
+            : [...conv.messages, msg];
+
+          updated[idx] = {
+            ...conv,
+            messages: newMessages,
+            lastMessage: msg.message,
+            lastMessageTime: msg.timestamp,
+          };
+          return updated;
+        });
+
+        // Atualiza conversa selecionada se o evento for da mesma sessão
+        setSelectedConversation((prev) => {
+          if (!prev || prev.id !== sessionId) return prev;
+          const existingLast = prev.messages[prev.messages.length - 1];
+          const isTempDuplicate = existingLast && existingLast.sender === msg.sender && existingLast.message === msg.message && typeof existingLast.id === 'number' && existingLast.id > 1e11;
+          const newMessages = isTempDuplicate
+            ? [...prev.messages.slice(0, -1), msg]
+            : [...prev.messages, msg];
+
+          return {
+            ...prev,
+            messages: newMessages,
+            lastMessage: msg.message,
+            lastMessageTime: msg.timestamp,
+          };
+        });
+      })
+      .subscribe();
+
+    realtimeChannelRef.current = channel;
+
+    return () => {
+      if (realtimeChannelRef.current) {
+        supabase.removeChannel(realtimeChannelRef.current);
+        realtimeChannelRef.current = null;
+      }
+    };
+  }, []);
+
+  // Persistir status da IA por conversa
+  useEffect(() => {
+    if (selectedConversation?.id) {
+      const saved = localStorage.getItem(`aiStatus:${selectedConversation.id}`);
+      if (saved) {
+        setIsAIActive(saved === 'on');
+      }
+    }
+  }, [selectedConversation?.id]);
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'online': return 'bg-green-500';
@@ -251,20 +373,86 @@ export default function AISupport() {
           message: {
             type: 'human',
             content: messageText,
-            additional_kwargs: {},
+            additional_kwargs: { sender: 'lawyer' },
             response_metadata: {}
           },
           created_at: new Date().toISOString()
         });
 
       if (clientError) {
-        console.error('Erro ao salvar mensagem do cliente:', clientError);
+        console.error('Erro ao salvar mensagem do advogado:', clientError);
         setIsTyping(false);
         return;
       }
 
       // Limpar o campo apenas após sucesso do salvamento
       setNewMessage('');
+
+      // Atualizar estado local para manter a mensagem do advogado visível
+      const tempLawyerMessage: Message = {
+        id: Date.now(),
+        sender: 'lawyer',
+        message: messageText,
+        timestamp: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+        date: new Date().toISOString().split('T')[0]
+      };
+      setConversations((prev) => prev.map((conv) => (
+        conv.id === selectedConversation.id
+          ? {
+              ...conv,
+              messages: [...conv.messages, tempLawyerMessage],
+              lastMessage: tempLawyerMessage.message,
+              lastMessageTime: tempLawyerMessage.timestamp
+            }
+          : conv
+      )));
+      setSelectedConversation((prev) => prev ? {
+        ...prev,
+        messages: [...prev.messages, tempLawyerMessage],
+        lastMessage: tempLawyerMessage.message,
+        lastMessageTime: tempLawyerMessage.timestamp
+      } : prev);
+
+      // Dispara webhook informando mensagem enviada pelo advogado
+      try {
+        const advWebhookUrl = 'https://n8n-n8n.04qisd.easypanel.host/webhook/advoga-msg-adv';
+        const payload = {
+          message: messageText,
+          whatsapp_number: selectedConversation.id,
+          session_id: selectedConversation.id,
+          client_name: selectedConversation.clientName,
+          client_phone: selectedConversation.clientPhone,
+          timestamp: new Date().toISOString()
+        };
+
+        const resp = await fetch(advWebhookUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        if (!resp.ok) {
+          const respText = await resp.text();
+          console.error('Falha ao chamar webhook advoga-msg-adv:', resp.status, respText);
+        } else {
+          console.log('✅ Webhook advoga-msg-adv enviado com sucesso');
+        }
+      } catch (err) {
+        console.error('Erro ao chamar webhook advoga-msg-adv:', err);
+      }
+
+      // Desativar IA automaticamente ao advogado enviar mensagem
+      try {
+        setIsAIActive(false);
+        localStorage.setItem(`aiStatus:${selectedConversation.id}`, 'off');
+        await notifyAIStatusChange(false, selectedConversation.id);
+      } catch (err) {
+        console.warn('Aviso: falha ao notificar/persistir desativação da IA', err);
+      }
+
+      // Não gerar resposta automática da IA após mensagem do advogado
+      setIsTyping(false);
+      return;
 
       // Verificar se a IA está ativa antes de processar resposta
       if (!isAIActive) {
@@ -293,51 +481,62 @@ export default function AISupport() {
         if (webhookResponse.ok) {
           const webhookData = await webhookResponse.json();
           // Assumindo que o webhook retorna a resposta da IA no campo 'response' ou 'message'
-          aiResponse = webhookData.response || webhookData.message || webhookData.reply || 'Resposta recebida do webhook.';
+          aiResponse = webhookData.response || webhookData.message || webhookData.reply || '';
         } else {
           console.error('Erro na resposta do webhook:', webhookResponse.status);
           // Fallback para resposta local se o webhook falhar
           aiResponse = getAIResponse(messageText);
         }
 
-        // Salvar resposta da IA no Supabase
-        const { error: aiError } = await supabase
-          .from('chat')
-          .insert({
-            session_id: selectedConversation.id,
-            message: {
-              type: 'ai',
-              content: aiResponse,
-              additional_kwargs: {},
-              response_metadata: {}
-            },
-            created_at: new Date().toISOString()
-          });
+        // Salvar resposta da IA no Supabase (evitar mensagens de sistema)
+        const aiText = (aiResponse || '').trim();
+        const skipAI = /^workflow(\swas)?\sstarted$/i.test(aiText) || aiText.length === 0;
+        if (!skipAI) {
+          const { error: aiError } = await supabase
+            .from('chat')
+            .insert({
+              session_id: selectedConversation.id,
+              message: {
+                type: 'ai',
+                content: aiText,
+                additional_kwargs: {},
+                response_metadata: {}
+              },
+              created_at: new Date().toISOString()
+            });
 
-        if (aiError) {
-          console.error('Erro ao salvar resposta da IA:', aiError);
+          if (aiError) {
+            console.error('Erro ao salvar resposta da IA:', aiError);
+          }
+        } else {
+          console.log('IA: resposta de sistema ignorada:', aiText);
         }
 
       } catch (webhookError) {
         console.error('Erro ao conectar com webhook:', webhookError);
         // Fallback para resposta local se o webhook falhar
         const aiResponse = getAIResponse(messageText);
-        
-        const { error: aiError } = await supabase
-          .from('chat')
-          .insert({
-            session_id: selectedConversation.id,
-            message: {
-              type: 'ai',
-              content: aiResponse,
-              additional_kwargs: {},
-              response_metadata: {}
-            },
-            created_at: new Date().toISOString()
-          });
+        const aiText = (aiResponse || '').trim();
+        const skipAI = /^workflow(\swas)?\sstarted$/i.test(aiText) || aiText.length === 0;
+        if (!skipAI) {
+          const { error: aiError } = await supabase
+            .from('chat')
+            .insert({
+              session_id: selectedConversation.id,
+              message: {
+                type: 'ai',
+                content: aiText,
+                additional_kwargs: {},
+                response_metadata: {}
+              },
+              created_at: new Date().toISOString()
+            });
 
-        if (aiError) {
-          console.error('Erro ao salvar resposta da IA:', aiError);
+          if (aiError) {
+            console.error('Erro ao salvar resposta da IA:', aiError);
+          }
+        } else {
+          console.log('IA: resposta de sistema ignorada (fallback):', aiText);
         }
       }
 
@@ -439,6 +638,7 @@ export default function AISupport() {
     const newStatus = !isAIActive;
     console.log(`🔄 Alterando status da IA de ${isAIActive} para ${newStatus}`);
     setIsAIActive(newStatus);
+    localStorage.setItem(`aiStatus:${selectedConversation.id}`, newStatus ? 'on' : 'off');
     
     // Notificar mudança via webhook
     console.log('📞 Chamando notifyAIStatusChange...');
@@ -639,17 +839,17 @@ export default function AISupport() {
               </div>
             </div>
 
-        {/* Messages */}
+            {/* Messages */}
         <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-4">
-          {selectedConversation.messages.map((message) => (
+          {cleanMessageContent(selectedConversation.messages).map((message) => (
             <div
               key={message.id}
-              className={`flex mb-4 ${message.sender === 'client' ? 'justify-end' : 'justify-start'}`}
+              className={`flex mb-4 ${message.sender === 'lawyer' || message.sender === 'ai' ? 'justify-end' : 'justify-start'}`}
             >
               <div className={`max-w-xs lg:max-w-md px-5 py-3 rounded-2xl shadow-sm break-words ${
                 message.sender === 'client'
-                  ? 'bg-black text-white rounded-br-md'
-                  : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-700 rounded-bl-md'
+                  ? 'bg-black text-white rounded-bl-md'
+                  : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-700 rounded-br-md'
               }`}>
                 {message.sender === 'ai' && (
                   <div className="flex items-center mb-2 min-w-0">
@@ -659,8 +859,16 @@ export default function AISupport() {
                     <span className="text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wide truncate">IA AgilizaDireito</span>
                   </div>
                 )}
+                {message.sender === 'lawyer' && (
+                  <div className="flex items-center mb-2 min-w-0">
+                    <div className="w-5 h-5 bg-black dark:bg-white rounded-full flex items-center justify-center mr-2 flex-shrink-0">
+                      <UserCheck className="h-3 w-3 text-white dark:text-black" />
+                    </div>
+                    <span className="text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wide truncate">Advogado</span>
+                  </div>
+                )}
                 <p className="text-sm leading-relaxed font-medium break-words overflow-hidden">{message.message}</p>
-                <div className={`flex items-center mt-2 min-w-0 ${message.sender === 'client' ? 'justify-end' : 'justify-start'}`}>
+                <div className={`flex items-center mt-2 min-w-0 ${message.sender === 'lawyer' || message.sender === 'ai' ? 'justify-end' : 'justify-start'}`}>
                   <Clock className="h-3 w-3 mr-1 opacity-60 flex-shrink-0" />
                   <span className="text-xs opacity-60 font-medium truncate">{message.timestamp}</span>
                 </div>
@@ -670,8 +878,8 @@ export default function AISupport() {
 
           {/* Typing Indicator */}
           {isTyping && (
-            <div className="flex justify-start mb-4">
-              <div className="bg-white dark:bg-gray-800 text-gray-900 dark:text-white max-w-xs lg:max-w-md px-5 py-3 rounded-2xl rounded-bl-md shadow-sm border border-gray-200 dark:border-gray-700">
+            <div className="flex justify-end mb-4">
+              <div className="bg-white dark:bg-gray-800 text-gray-900 dark:text-white max-w-xs lg:max-w-md px-5 py-3 rounded-2xl rounded-br-md shadow-sm border border-gray-200 dark:border-gray-700">
                 <div className="flex items-center mb-2">
                   <div className="w-5 h-5 bg-black dark:bg-white rounded-full flex items-center justify-center mr-2">
                     <Bot className="h-3 w-3 text-white dark:text-black" />
@@ -733,5 +941,5 @@ export default function AISupport() {
         )}
       </div>
     </div>
-  );
-}
+    );
+  }
