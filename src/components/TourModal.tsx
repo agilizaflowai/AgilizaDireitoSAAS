@@ -8,37 +8,60 @@ interface TourModalProps {
 
 const tourSteps = [
   {
-    title: 'Bem-vindo ao AgilizaDireito',
-    description: 'Sua plataforma completa de automação jurídica com inteligência artificial.',
-    image: '⚖️'
+    title: 'Dashboard',
+    description: 'Visão geral com indicadores, atividades recentes e atalhos principais.',
+    image: '📊'
   },
   {
-    title: 'Filtro Inteligente de Clientes',
-    description: 'Qualifique leads automaticamente com score de 0-100 baseado em critérios jurídicos.',
+    title: 'Clientes',
+    description: 'Filtre e qualifique clientes com score automático e ações rápidas.',
     image: '👥'
   },
   {
-    title: 'Gerador de Documentos IA',
-    description: 'Crie petições, contratos e documentos jurídicos em segundos com nossa IA.',
+    title: 'Leads',
+    description: 'Gerencie leads e prospects com tags, contato e conversão.',
+    image: '👤➕'
+  },
+  {
+    title: 'Filtro de Processos',
+    description: 'Organize e filtre processos por partes, vara, status e datas.',
+    image: '🗂️'
+  },
+  {
+    title: 'Pesquisa de Processos',
+    description: 'Pesquise processos via CNJ e importe resultados para o sistema.',
+    image: '🔎'
+  },
+  {
+    title: 'Documentos IA',
+    description: 'Gere petições e contratos com IA a partir de templates.',
     image: '📄'
   },
   {
     title: 'Análise de Contratos',
-    description: 'Identifique riscos e melhore contratos automaticamente com análise jurídica.',
-    image: '🔍'
-  },
-
-  {
-    title: 'Gestão de Prazos',
-    description: 'Nunca mais perca um prazo com alertas automáticos e calendário inteligente.',
-    image: '⏰'
+    description: 'Detecte riscos e cláusulas críticas com recomendações automáticas.',
+    image: '📑'
   },
   {
-    title: 'Atendimento IA 24/7',
-    description: 'Atenda seus clientes automaticamente com respostas inteligentes.',
+    title: 'Validador de CPF',
+    description: 'Valide CPFs pelo algoritmo oficial e consulte dados externos.',
+    image: '🛡️'
+  },
+  {
+    title: 'Cálculo de Honorários',
+    description: 'Calcule honorários por área, complexidade, tempo e risco.',
+    image: '🧮'
+  },
+  {
+    title: 'Agenda Jurídica',
+    description: 'Controle compromissos e prazos com calendário e alertas.',
+    image: '🗓️'
+  },
+  {
+    title: 'Atendimento IA',
+    description: 'Atenda clientes 24/7 com chat inteligente e histórico.',
     image: '💬'
   },
-
 ];
 
 export default function TourModal({ isOpen, onClose }: TourModalProps) {
