@@ -1,5 +1,4 @@
 import React, { createContext, useContext, useReducer, ReactNode } from 'react';
-import { supabase } from '../supabaseClient';
 
 interface User {
   id: string;
@@ -98,8 +97,7 @@ export function useApp() {
   
   const { state, dispatch } = context;
   
-  const logout = async () => {
-    try { await supabase.auth.signOut(); } catch {}
+  const logout = () => {
     dispatch({ type: 'LOGOUT' });
   };
   
