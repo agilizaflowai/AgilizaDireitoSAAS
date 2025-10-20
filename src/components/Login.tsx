@@ -19,27 +19,35 @@ export default function Login() {
     setError('');
 
     try {
-      // Login via Supabase Auth (email/senha)
-      const { data, error } = await supabase.auth.signInWithPassword({
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email,
-        password,
+        password
       });
 
-      if (error || !data?.user) {
+      if (authError || !authData?.user) {
         setError('Email ou senha incorretos');
         setIsLoading(false);
         return;
       }
 
-      const supaUser = data.user;
+      let advogado: { nome?: string; oab?: number; uf?: string } | null = null;
+      const { data: advData, error: advError } = await supabase
+        .from('advogados')
+        .select('nome, oab, uf')
+        .limit(1)
+        .maybeSingle();
+
+      if (!advError && advData) {
+        advogado = advData as any;
+      }
+
       const user = {
-        id: supaUser.id,
-        name:
-          (supaUser.user_metadata && (supaUser.user_metadata as any).full_name) ||
-          (supaUser.email ? supaUser.email.split('@')[0] : 'Usuário'),
-        email: supaUser.email || email,
-        avatar:
-          'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80',
+        id: authData.user.id,
+        name: advogado?.nome || 'Usuário',
+        email: authData.user.email || email,
+        oab: advogado?.oab,
+        uf: advogado?.uf,
+        avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80'
       };
 
       dispatch({ type: 'LOGIN', payload: user });
@@ -54,55 +62,65 @@ export default function Login() {
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
       <div className="max-w-md w-full">
-        <div className="bg-white rounded-lg shadow-sm p-8">
+        <div className="bg-white border border-gray-200 rounded-md shadow-sm p-8">
           <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-blue-50 mb-3">
-              <Scale className="h-6 w-6 text-blue-600" />
+            <div className="flex justify-center mb-6">
+              <div className="bg-slate-900 p-3 rounded-md">
+                <Scale className="h-8 w-8 text-white" />
+              </div>
             </div>
-            <h2 className="text-2xl font-bold">AgilizaDireito</h2>
-            <p className="text-gray-600">Acesse sua conta para continuar</p>
+            <h1 className="text-2xl font-semibold text-slate-900 tracking-tight mb-2 login-title">AgilizaDireito</h1>
+            <p className="text-gray-600 text-sm">Acesse sua conta para continuar</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-              <div className={`relative rounded-md shadow-sm ${emailFocused ? 'ring-2 ring-blue-200' : ''}`}>
-                <div className="pointer-events-none absolute inset-y-0 left-0 pl-3 flex items-center">
-                  <Mail className="h-4 w-4 text-gray-400" />
-                </div>
+              <label htmlFor="email" className="block text-sm font-medium text-slate-900 mb-2">
+                Email
+              </label>
+              <div className="relative">
+                {!(emailFocused || email) && (
+                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 transition-opacity duration-150" />
+                )}
                 <input
+                  id="email"
                   type="email"
+                  required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   onFocus={() => setEmailFocused(true)}
                   onBlur={() => setEmailFocused(false)}
-                  className="block w-full pl-10 rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-                  placeholder="seuemail@exemplo.com"
-                  required
+                  className="input-primary login-input"
+                  style={{ paddingLeft: (emailFocused || email) ? '1rem' : '2rem' }}
+                  placeholder="seu@email.com"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Senha</label>
-              <div className={`relative rounded-md shadow-sm ${passwordFocused ? 'ring-2 ring-blue-200' : ''}`}>
-                <div className="pointer-events-none absolute inset-y-0 left-0 pl-3 flex items-center">
-                  <Lock className="h-4 w-4 text-gray-400" />
-                </div>
+              <label htmlFor="password" className="block text-sm font-medium text-slate-900 mb-2">
+                Senha
+              </label>
+              <div className="relative">
+                {!(passwordFocused || password) && (
+                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 transition-opacity duration-150" />
+                )}
                 <input
+                  id="password"
                   type={showPassword ? 'text' : 'password'}
+                  required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   onFocus={() => setPasswordFocused(true)}
                   onBlur={() => setPasswordFocused(false)}
-                  className="block w-full pl-10 pr-10 rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                  className="input-primary login-input pr-10"
+                  style={{ paddingLeft: (passwordFocused || password) ? '1rem' : '2rem' }}
                   placeholder="••••••••"
-                  required
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
