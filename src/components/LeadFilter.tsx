@@ -204,15 +204,9 @@ export default function LeadFilter() {
                         </div>
                         
                         <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 border border-gray-200 dark:border-gray-600 h-24 flex flex-col">
-                          <div className="flex items-center justify-between mb-2">
-                            <div className="flex items-center">
-                              <Phone className="h-5 w-5 mr-3 text-black dark:text-white" strokeWidth={2} />
-                              <span className="font-semibold text-black dark:text-white text-sm uppercase tracking-wide">Telefone</span>
-                            </div>
-                            <button className="bg-black text-white px-3 py-1 rounded-md text-xs font-medium hover:bg-gray-800 transition-colors duration-200 flex items-center gap-1">
-                              <MessageCircle className="h-3 w-3" />
-                              Conversar
-                            </button>
+                          <div className="flex items-center mb-2">
+                            <Phone className="h-5 w-5 mr-3 text-black dark:text-white" strokeWidth={2} />
+                            <span className="font-semibold text-black dark:text-white text-sm uppercase tracking-wide">Telefone</span>
                           </div>
                           <span className="text-lg font-mono text-gray-800 dark:text-gray-200 block">{formatWhatsApp(lead.whatsapp)}</span>
                         </div>

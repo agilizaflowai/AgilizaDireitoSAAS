@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Calendar, Clock, Plus, ChevronLeft, ChevronRight, Grid3X3, List, Eye, X, Save, Edit3, Trash2, User, MapPin, Bell } from 'lucide-react';
 import PageHeader from './PageHeader';
 import ConfirmModal from './ConfirmModal';
+import { useApp } from '../contexts/AppContext';
 
 interface Event {
   id: string;
@@ -36,6 +37,7 @@ interface TimeSlot {
 }
 
 export default function DeadlineManagement() {
+  const { user } = useApp();
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<ViewMode>('month');
   const [events, setEvents] = useState<Event[]>([]);
@@ -53,7 +55,7 @@ export default function DeadlineManagement() {
     type: 'appointment' as 'appointment' | 'deadline' | 'meeting' | 'court',
     priority: 'medium' as 'low' | 'medium' | 'high',
     client: '',
-    responsible: 'Dra. Júlia Rabello',
+    responsible: user?.name || 'Usuário',
     location: '',
     color: '#3B82F6'
   });
@@ -361,7 +363,7 @@ export default function DeadlineManagement() {
         type: 'appointment',
         priority: 'medium',
         client: '',
-        responsible: 'Dra. Júlia Rabello',
+        responsible: user?.name || 'Usuário',
         location: '',
         color: '#3B82F6'
       });
@@ -442,7 +444,7 @@ export default function DeadlineManagement() {
       type: formData.type,
       priority: formData.priority,
       client: formData.client,
-      responsible: 'Dra. Júlia Rabello', // Sempre definir como Dra. Júlia Rabello
+      responsible: user?.name || 'Usuário',
       location: formData.location,
       color: formData.color,
       status: editingEvent?.status || 'pending'

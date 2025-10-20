@@ -19,34 +19,38 @@ export default function Login() {
     setError('');
 
     try {
+      // Autenticar com Supabase Auth
       const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email,
-        password
+        password,
       });
 
-      if (authError || !authData?.user) {
+      if (authError || !authData.user) {
         setError('Email ou senha incorretos');
         setIsLoading(false);
         return;
       }
 
-      let advogado: { nome?: string; oab?: number; uf?: string } | null = null;
-      const { data: advData, error: advError } = await supabase
+      // Buscar dados do advogado usando o user_id
+      const { data: advogadoData, error: advogadoError } = await supabase
         .from('advogados')
-        .select('nome, oab, uf')
-        .limit(1)
-        .maybeSingle();
+        .select('*')
+        .eq('user_id', authData.user.id)
+        .single();
 
-      if (!advError && advData) {
-        advogado = advData as any;
+      if (advogadoError || !advogadoData) {
+        setError('Dados do advogado não encontrados. Entre em contato com o suporte.');
+        setIsLoading(false);
+        return;
       }
 
+      // Login bem-sucedido
       const user = {
         id: authData.user.id,
-        name: advogado?.nome || 'Usuário',
+        name: advogadoData.nome || 'Usuário',
         email: authData.user.email || email,
-        oab: advogado?.oab,
-        uf: advogado?.uf,
+        oab: advogadoData.oab,
+        uf: advogadoData.uf,
         avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80'
       };
 

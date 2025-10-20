@@ -1,4 +1,19 @@
 import React, { useState } from 'react';
+import { Pencil } from 'lucide-react';
+
+// Botão Editar — tema preto e branco
+const EditButton = ({ onClick }) => (
+  <button
+    type="button"
+    onClick={onClick}
+    className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md border border-gray-900 text-gray-900 hover:bg-gray-900 hover:text-white transition-colors text-xs dark:border-gray-200 dark:text-gray-200 dark:hover:bg-white dark:hover:text-black"
+    aria-label="Editar seção"
+    title="Editar"
+  >
+    <Pencil className="h-3 w-3" />
+    Editar
+  </button>
+);
 
 export default function Step6Revisao({ data, updateForm, prevStep, onSubmit }) {
   // Estados para controlar qual seção está sendo editada
@@ -19,7 +34,7 @@ export default function Step6Revisao({ data, updateForm, prevStep, onSubmit }) {
     
     const displayValue = transform ? transform(value) : value;
     return (
-      <div><b>{label}:</b> {displayValue}</div>
+      <div className="text-slate-900 dark:text-white"><b>{label}:</b> {displayValue}</div>
     );
   };
 
@@ -71,15 +86,15 @@ export default function Step6Revisao({ data, updateForm, prevStep, onSubmit }) {
 
   return (
     <div className="space-y-8">
-      <h2 className="text-xl font-bold mb-4">Revisão Final</h2>
+      <h2 className="text-2xl font-semibold tracking-tight text-slate-900 dark:text-white">Revisão Final</h2>
       
       {/* Dados da Ação */}
       {hasDadosAcao && (
-        <div className="bg-gray-50 dark:bg-gray-700 rounded p-4 shadow-sm">
+        <div className="bg-white dark:bg-gray-900 rounded-xl p-6 shadow border border-gray-200 dark:border-gray-700">
           <div className="flex justify-between items-center mb-2">
-            <h3 className="font-semibold text-black">Dados da Ação</h3>
+            <h3 className="font-semibold text-black dark:text-white">Dados da Ação</h3>
             {editingSection !== 'dadosAcao' && (
-              <button type="button" className="text-blue-600 underline text-xs hover:text-blue-800" onClick={() => handleEdit('dadosAcao')}>Editar</button>
+              <EditButton onClick={() => handleEdit('dadosAcao')} />
             )}
           </div>
           
@@ -145,7 +160,7 @@ export default function Step6Revisao({ data, updateForm, prevStep, onSubmit }) {
               </div>
             </div>
           ) : (
-            <div className="text-sm text-gray-700 space-y-2">
+            <div className="text-sm text-slate-900 dark:text-white space-y-2">
               {renderField('Fatos do caso', data.fatosCaso)}
               {renderField('Parte representada', data.parteRepresentada)}
               {renderField('Parte contrária', data.parteContraria)}
@@ -157,7 +172,7 @@ export default function Step6Revisao({ data, updateForm, prevStep, onSubmit }) {
                   <b>Documentos anexados:</b>
                   <ul className="ml-4 mt-1">
                     {data.uploadedFiles.map((file, index) => (
-                      <li key={index} className="text-xs text-gray-600">• {file.name}</li>
+                      <li key={index} className="text-xs text-slate-700 dark:text-gray-300">• {file.name}</li>
                     ))}
                   </ul>
                 </div>
@@ -169,11 +184,11 @@ export default function Step6Revisao({ data, updateForm, prevStep, onSubmit }) {
 
       {/* Perguntas da IA */}
       {hasPerguntasIA && (
-        <div className="bg-gray-50 dark:bg-gray-700 rounded p-4 shadow-sm">
+        <div className="bg-white dark:bg-gray-900 rounded-xl p-6 shadow border border-gray-200 dark:border-gray-700">
           <div className="flex justify-between items-center mb-2">
-            <h3 className="font-semibold text-black">Perguntas da IA</h3>
+            <h3 className="font-semibold text-black dark:text-white">Perguntas da IA</h3>
             {editingSection !== 'perguntasIA' && (
-              <button type="button" className="text-blue-600 underline text-xs hover:text-blue-800" onClick={() => handleEdit('perguntasIA')}>Editar</button>
+              <EditButton onClick={() => handleEdit('perguntasIA')} />
             )}
           </div>
           
@@ -230,35 +245,35 @@ export default function Step6Revisao({ data, updateForm, prevStep, onSubmit }) {
               </div>
             </div>
           ) : (
-            <div className="text-sm text-gray-700 space-y-4">
+            <div className="text-sm text-slate-900 dark:text-white space-y-4">
               {isFieldFilled(data.pergunta1) && (
                 <div>
-                  <div className="font-medium text-gray-800 mb-1">1. Qual o valor mensal estimado das despesas atuais de Pedro Henrique da Silva, discriminando-as?</div>
-                  <div className="text-gray-600 pl-4 border-l-2 border-blue-200">{data.pergunta1}</div>
+                  <div className="font-medium text-slate-900 dark:text-white mb-1">1. Qual o valor mensal estimado das despesas atuais de Pedro Henrique da Silva, discriminando-as?</div>
+                  <div className="pl-4 border-l-2 border-blue-200 dark:text-white">{data.pergunta1}</div>
                 </div>
               )}
               {isFieldFilled(data.pergunta2) && (
                 <div>
-                  <div className="font-medium text-gray-800 mb-1">2. O genitor João Marcos da Silva possui alguma fonte de renda formal ou informal?</div>
-                  <div className="text-gray-600 pl-4 border-l-2 border-blue-200">{data.pergunta2}</div>
+                  <div className="font-medium text-slate-900 dark:text-white mb-1">2. O genitor João Marcos da Silva possui alguma fonte de renda formal ou informal?</div>
+                  <div className="pl-4 border-l-2 border-blue-200 dark:text-white">{data.pergunta2}</div>
                 </div>
               )}
               {isFieldFilled(data.pergunta3) && (
                 <div>
-                  <div className="font-medium text-gray-800 mb-1">3. Ana Luiza Costa possui condições financeiras de arcar integralmente com as despesas?</div>
-                  <div className="text-gray-600 pl-4 border-l-2 border-blue-200">{data.pergunta3}</div>
+                  <div className="font-medium text-slate-900 dark:text-white mb-1">3. Ana Luiza Costa possui condições financeiras de arcar integralmente com as despesas?</div>
+                  <div className="pl-4 border-l-2 border-blue-200 dark:text-white">{data.pergunta3}</div>
                 </div>
               )}
               {isFieldFilled(data.pergunta4) && (
                 <div>
-                  <div className="font-medium text-gray-800 mb-1">4. O autor possui alguma necessidade especial de saúde ou educação?</div>
-                  <div className="text-gray-600 pl-4 border-l-2 border-blue-200">{data.pergunta4}</div>
+                  <div className="font-medium text-slate-900 dark:text-white mb-1">4. O autor possui alguma necessidade especial de saúde ou educação?</div>
+                  <div className="pl-4 border-l-2 border-blue-200 dark:text-white">{data.pergunta4}</div>
                 </div>
               )}
               {isFieldFilled(data.pergunta5) && (
                 <div>
-                  <div className="font-medium text-gray-800 mb-1">5. Houve alguma tentativa de acordo extrajudicial com João Marcos da Silva?</div>
-                  <div className="text-gray-600 pl-4 border-l-2 border-blue-200">{data.pergunta5}</div>
+                  <div className="font-medium text-slate-900 dark:text-white mb-1">5. Houve alguma tentativa de acordo extrajudicial com João Marcos da Silva?</div>
+                  <div className="pl-4 border-l-2 border-blue-200 dark:text-white">{data.pergunta5}</div>
                 </div>
               )}
             </div>
@@ -268,11 +283,11 @@ export default function Step6Revisao({ data, updateForm, prevStep, onSubmit }) {
 
       {/* Dos Fatos */}
       {hasDosFatos && (
-        <div className="bg-gray-50 dark:bg-gray-700 rounded p-4 shadow-sm">
+        <div className="bg-white dark:bg-gray-900 rounded-xl p-6 shadow border border-gray-200 dark:border-gray-700">
           <div className="flex justify-between items-center mb-2">
-            <h3 className="font-semibold text-black">Dos Fatos</h3>
+            <h3 className="font-semibold text-black dark:text-white">Dos Fatos</h3>
             {editingSection !== 'dosFatos' && (
-              <button type="button" className="text-blue-600 underline text-xs hover:text-blue-800" onClick={() => handleEdit('dosFatos')}>Editar</button>
+              <EditButton onClick={() => handleEdit('dosFatos')} />
             )}
           </div>
           
@@ -293,8 +308,8 @@ export default function Step6Revisao({ data, updateForm, prevStep, onSubmit }) {
               </div>
             </div>
           ) : (
-            <div className="text-sm text-gray-700">
-              <div className="whitespace-pre-wrap">{data.dosFatos}</div>
+            <div className="text-sm text-slate-900 dark:text-white">
+              <div className="whitespace-pre-wrap text-slate-900 dark:text-white">{data.dosFatos}</div>
             </div>
           )}
         </div>
@@ -302,11 +317,11 @@ export default function Step6Revisao({ data, updateForm, prevStep, onSubmit }) {
 
       {/* Fundamentos Jurídicos */}
       {hasFundamentosJuridicos && (
-        <div className="bg-gray-50 dark:bg-gray-700 rounded p-4 shadow-sm">
+        <div className="bg-white dark:bg-gray-900 rounded-xl p-6 shadow border border-gray-200 dark:border-gray-700">
           <div className="flex justify-between items-center mb-2">
-            <h3 className="font-semibold text-black">Fundamentos Jurídicos</h3>
+            <h3 className="font-semibold text-black dark:text-white">Fundamentos Jurídicos</h3>
             {editingSection !== 'fundamentosJuridicos' && (
-              <button type="button" className="text-blue-600 underline text-xs hover:text-blue-800" onClick={() => handleEdit('fundamentosJuridicos')}>Editar</button>
+              <EditButton onClick={() => handleEdit('fundamentosJuridicos')} />
             )}
           </div>
           
@@ -327,8 +342,8 @@ export default function Step6Revisao({ data, updateForm, prevStep, onSubmit }) {
               </div>
             </div>
           ) : (
-            <div className="text-sm text-gray-700">
-              <div className="whitespace-pre-wrap">{data.fundamentosJuridicos}</div>
+            <div className="text-sm text-slate-900 dark:text-white">
+              <div className="whitespace-pre-wrap text-slate-900 dark:text-white">{data.fundamentosJuridicos}</div>
             </div>
           )}
         </div>
@@ -336,11 +351,11 @@ export default function Step6Revisao({ data, updateForm, prevStep, onSubmit }) {
 
       {/* Pedidos */}
       {hasPedidos && (
-        <div className="bg-gray-50 dark:bg-gray-700 rounded p-4 shadow-sm">
+        <div className="bg-white dark:bg-gray-900 rounded-xl p-6 shadow border border-gray-200 dark:border-gray-700">
           <div className="flex justify-between items-center mb-2">
-            <h3 className="font-semibold text-black">Pedidos</h3>
+            <h3 className="font-semibold text-black dark:text-white">Pedidos</h3>
             {editingSection !== 'pedidos' && (
-              <button type="button" className="text-blue-600 underline text-xs hover:text-blue-800" onClick={() => handleEdit('pedidos')}>Editar</button>
+              <EditButton onClick={() => handleEdit('pedidos')} />
             )}
           </div>
           
@@ -432,11 +447,11 @@ export default function Step6Revisao({ data, updateForm, prevStep, onSubmit }) {
               </div>
             </div>
           ) : (
-            <div className="text-sm text-gray-700">
+            <div className="text-sm text-slate-900 dark:text-white">
               {isFieldFilled(data.pedidos) && (
                 <>
                   <div><b>Pedidos principais:</b></div>
-                  <div className="whitespace-pre-wrap mb-2">{data.pedidos}</div>
+                  <div className="whitespace-pre-wrap mb-2 text-slate-900 dark:text-white">{data.pedidos}</div>
                 </>
               )}
               {renderField('Valor dos danos materiais', data.danosMateriais)}

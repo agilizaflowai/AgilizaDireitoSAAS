@@ -37,22 +37,22 @@ export default function Step4FundamentosJuridicos({ data, updateForm, nextStep, 
     }
   };
 
-  // Carregar dados dos fundamentos jurídicos ao montar o componente - REMOVIDO PARA NÃO PRÉ-PREENCHER
-  // useEffect(() => {
-  //   const loadFundamentosJuridicos = async () => {
-  //     if (!data.fundamentosJuridicos) {
-  //       setIsLoading(true);
-  //       const dadosFundamentosJuridicos = await fetchFundamentosJuridicos();
-  //       if (dadosFundamentosJuridicos) {
-  //         setFundamentosJuridicos(dadosFundamentosJuridicos);
-  //         updateForm({ fundamentosJuridicos: dadosFundamentosJuridicos });
-  //       }
-  //       setIsLoading(false);
-  //     }
-  //   };
+  // Carregar dados dos fundamentos jurídicos ao montar o componente
+  useEffect(() => {
+    const loadFundamentosJuridicos = async () => {
+      if (!data.fundamentosJuridicos) {
+        setIsLoading(true);
+        const dadosFundamentosJuridicos = await fetchFundamentosJuridicos();
+        if (dadosFundamentosJuridicos) {
+          setFundamentosJuridicos(dadosFundamentosJuridicos);
+          updateForm({ fundamentosJuridicos: dadosFundamentosJuridicos });
+        }
+        setIsLoading(false);
+      }
+    };
 
-  //   loadFundamentosJuridicos();
-  // }, []);
+    loadFundamentosJuridicos();
+  }, []);
 
   const handleChange = (e) => {
     const value = e.target.value;
@@ -77,15 +77,15 @@ export default function Step4FundamentosJuridicos({ data, updateForm, nextStep, 
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 bg-white dark:bg-gray-800 rounded-xl p-6 shadow border border-gray-200 dark:border-gray-700">
       <div>
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Fundamentos Jurídicos</h2>
-        <p className="text-gray-600">Descreva os fundamentos jurídicos que embasam a ação judicial.</p>
+        <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">Fundamentos Jurídicos</h2>
+        <p className="text-slate-700 dark:text-gray-300">Descreva os fundamentos jurídicos que embasam a ação judicial.</p>
       </div>
 
       <form onSubmit={handleNext} className="space-y-6">
         <div>
-          <label htmlFor="fundamentosJuridicos" className="block text-sm font-medium text-gray-700 mb-2">
+          <label htmlFor="fundamentosJuridicos" className="block text-sm font-medium text-slate-900 dark:text-white mb-2">
             DOS FUNDAMENTOS JURÍDICOS *
           </label>
           <textarea
@@ -94,11 +94,11 @@ export default function Step4FundamentosJuridicos({ data, updateForm, nextStep, 
             value={fundamentosJuridicos}
             onChange={handleChange}
             placeholder="Descreva os fundamentos jurídicos que embasam a ação judicial..."
-            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:border-gray-400 transition-colors duration-200 resize-none"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:border-gray-400 dark:focus:border-gray-500 transition-colors duration-200 resize-none bg-white dark:bg-gray-700 text-slate-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-300"
             rows={15}
             required
           />
-          <p className="mt-1 text-sm text-gray-500">
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
             {fundamentosJuridicos.length} de 5000 caracteres permitidos.
           </p>
         </div>

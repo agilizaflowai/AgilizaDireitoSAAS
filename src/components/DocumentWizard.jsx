@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType } from 'docx';
 import { saveAs } from 'file-saver';
 import { ArrowLeft, ArrowRight, Download, Eye, FileText, X } from 'lucide-react';
@@ -9,7 +9,9 @@ const steps = ['Dados do Documento', 'Revisão'];
 
 const DocumentWizard = ({ documentType, onCancel }) => {
   const [currentStep, setCurrentStep] = useState(0);
-  const [formData, setFormData] = useState({
+  
+  // Estado inicial dos campos do formulário
+  const initialFormData = {
     title: '',
     clientName: '',
     clientCpf: '',
@@ -35,7 +37,9 @@ const DocumentWizard = ({ documentType, onCancel }) => {
     agreementEffect: '',
     judicialHomologation: '',
     signatures: ''
-  });
+  };
+  
+  const [formData, setFormData] = useState(initialFormData);
   
   const [generatedDoc, setGeneratedDoc] = useState(null);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -46,6 +50,19 @@ const DocumentWizard = ({ documentType, onCancel }) => {
   const [procuracaoData, setProcuracaoData] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editedContent, setEditedContent] = useState('');
+
+  // Limpar campos quando o tipo de documento muda
+  useEffect(() => {
+    setFormData(initialFormData);
+    setCurrentStep(0);
+    setGeneratedDoc(null);
+    setContestacaoData(null);
+    setRecursoData(null);
+    setContratoData(null);
+    setProcuracaoData(null);
+    setIsEditing(false);
+    setEditedContent('');
+  }, [documentType]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;

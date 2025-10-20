@@ -68,10 +68,7 @@ const initialFormData = {
 
 export default function PeticaoInicialWizard({ onCancel }) {
   const [step, setStep] = useState(0);
-  const [formData, setFormData] = useState(() => {
-    const saved = localStorage.getItem('peticaoWizard');
-    return saved ? JSON.parse(saved) : initialFormData;
-  });
+  const [formData, setFormData] = useState(initialFormData);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(null);
   const [submitError, setSubmitError] = useState(null);
