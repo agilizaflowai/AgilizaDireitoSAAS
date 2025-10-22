@@ -192,7 +192,7 @@ export default function Dashboard() {
                  </div>
                  
                  {/* Breakdown Detalhado */}
-                 <div className={metrics.totalContratos === 1 ? "grid grid-cols-1 gap-4 justify-items-center" : "grid grid-cols-2 gap-4"}>
+                 <div className={metrics.totalContratos === 1 ? "flex justify-center" : "grid grid-cols-2 gap-4"}>
                    {/* Contratos Seguros */}
                    {metrics.contractsStatus.seguro > 0 && (
                      <div className={`bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-600 shadow-sm ${metrics.totalContratos === 1 ? 'mx-auto w-[calc(50%-0.5rem)]' : ''}`}>
