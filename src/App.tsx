@@ -81,36 +81,36 @@ function AppContent() {
 
     const { data: authSub } = supabase.auth.onAuthStateChange(async (event, session) => {
       try {
-        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-          const baseUser = {
-            id: session?.user.id || '',
-            name: session?.user.user_metadata?.name || 'Usuário',
-            email: session?.user.email || '',
-            avatar: session?.user.user_metadata?.avatar_url || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80'
-          } as any;
-          dispatch({ type: 'LOGIN', payload: baseUser });
+        if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+          if (session?.user) {
+            const baseUser = {
+              id: session.user.id,
+              name: session.user.user_metadata?.name || 'Usuário',
+              email: session.user.email || '',
+              avatar: session.user.user_metadata?.avatar_url || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80'
+            } as any;
+            dispatch({ type: 'LOGIN', payload: baseUser });
 
-          // enriquecimento não-bloqueante
-          supabase
-            .from('advogados')
-            .select('*')
-            .eq('user_id', session?.user.id)
-            .single()
-            .then(({ data }) => {
-              if (data) {
-                const enrichedUser = {
-                  ...baseUser,
-                  name: data.nome || baseUser.name,
-                  oab: data.oab,
-                  uf: data.uf,
-                } as any;
-                dispatch({ type: 'LOGIN', payload: enrichedUser });
-                try { localStorage.setItem('agiliza-user', JSON.stringify(enrichedUser)); } catch {}
-              }
-            })
-            .catch((e) => console.warn('Falha ao enriquecer dados do advogado:', e));
-        }
-        if (event === 'SIGNED_OUT') {
+            supabase
+              .from('advogados')
+              .select('*')
+              .eq('user_id', session.user.id)
+              .single()
+              .then(({ data }) => {
+                if (data) {
+                  const enrichedUser = {
+                    ...baseUser,
+                    name: data.nome || baseUser.name,
+                    oab: data.oab,
+                    uf: data.uf,
+                  } as any;
+                  dispatch({ type: 'LOGIN', payload: enrichedUser });
+                  try { localStorage.setItem('agiliza-user', JSON.stringify(enrichedUser)); } catch {}
+                }
+              })
+              .catch((e) => console.warn('Falha ao enriquecer dados do advogado:', e));
+          }
+        } else if (event === 'SIGNED_OUT') {
           dispatch({ type: 'LOGOUT' });
         }
       } catch (e) {
