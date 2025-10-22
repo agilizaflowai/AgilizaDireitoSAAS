@@ -50,21 +50,24 @@ export default function ActionMenu({ items }: ActionMenuProps) {
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="action-menu-trigger"
+        aria-haspopup="menu"
+        aria-expanded={isOpen}
+        aria-label="Abrir menu de ações"
       >
         <MoreVertical className="h-4 w-4" strokeWidth={1.5} />
       </button>
 
       {isOpen && (
-        <div className="action-menu">
+        <div className="action-menu" role="menu">
           {menuItems.map((item, index) => {
             const Icon = item.icon;
+            const dangerClass = item.variant === 'danger' ? ' dropdown-item-danger' : '';
             return (
               <button
                 key={index}
                 onClick={() => handleItemClick(item.onClick)}
-                className={`dropdown-item ${
-                  item.variant === 'danger' ? 'text-red-700 hover:bg-red-50' : ''
-                }`}
+                className={`dropdown-item${dangerClass}`}
+                role="menuitem"
               >
                 <Icon className="h-4 w-4 mr-3" strokeWidth={1.5} />
                 {item.label}

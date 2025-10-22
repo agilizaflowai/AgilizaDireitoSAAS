@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Phone, Calendar, Tag, FileText, Scale, TrendingUp, MessageCircle, UserPlus } from 'lucide-react';
+import { Search, Phone, Calendar, Tag, FileText, Scale, TrendingUp, MessageCircle, UserPlus, Trash2 } from 'lucide-react';
 import EmptyState from './EmptyState';
 import SwipeableListItem from './SwipeableListItem';
 import ActionMenu from './ActionMenu';
 import PageHeader from './PageHeader';
 import { supabase } from '../supabaseClient';
+import ConfirmModal from './ConfirmModal';
 
 interface Lead {
   whatsapp: string;
@@ -51,6 +52,42 @@ export default function LeadFilter() {
   const [currentPage, setCurrentPage] = useState(1);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const itemsPerPage = 10;
+
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [leadToDelete, setLeadToDelete] = useState<Lead | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const openDeleteModal = (lead: Lead) => {
+    setLeadToDelete(lead);
+    setShowDeleteModal(true);
+  };
+
+  const closeDeleteModal = () => {
+    setShowDeleteModal(false);
+    setLeadToDelete(null);
+  };
+
+  const confirmDeleteLead = async () => {
+    if (!leadToDelete) return;
+    try {
+      setIsDeleting(true);
+      const { error } = await supabase
+        .from('leads')
+        .delete()
+        .eq('whatsapp', leadToDelete.whatsapp);
+      if (error) {
+        console.error('Erro ao excluir lead:', error);
+        alert('Erro ao excluir lead. Tente novamente.');
+        return;
+      }
+      setLeads((prev) => prev.filter((l) => l.whatsapp !== leadToDelete.whatsapp));
+    } catch (err) {
+      console.error('Falha na conexão com Supabase:', err);
+      alert('Falha na conexão com Supabase.');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   // Carregar dados reais do Supabase
   useEffect(() => {
@@ -181,7 +218,7 @@ export default function LeadFilter() {
               <SwipeableListItem
                 key={lead.whatsapp}
                 onEdit={() => console.log('Edit lead', lead.whatsapp)}
-                onDelete={() => console.log('Delete lead', lead.whatsapp)}
+                onDelete={() => openDeleteModal(lead)}
               >
                 <div className="p-8">
                   <div className="flex items-start justify-between mb-6">
@@ -246,7 +283,7 @@ export default function LeadFilter() {
                     </div>
                     
                     <div className="ml-6 flex items-start">
-                      <ActionMenu />
+                      <ActionMenu items={[{ label: 'Excluir', icon: Trash2, variant: 'danger', onClick: () => openDeleteModal(lead) }]} />
                     </div>
                   </div>
                 </div>
@@ -301,6 +338,17 @@ export default function LeadFilter() {
           </>
         )}
       </div>
+
+      <ConfirmModal
+        isOpen={showDeleteModal}
+        onClose={closeDeleteModal}
+        onConfirm={confirmDeleteLead}
+        title="Excluir Lead"
+        message={`Tem certeza que deseja excluir o lead ${leadToDelete?.nome}? Esta ação não pode ser desfeita.`}
+        confirmText={isDeleting ? 'Excluindo...' : 'Excluir'}
+        cancelText="Cancelar"
+        variant="danger"
+      />
     </div>
   );
 }

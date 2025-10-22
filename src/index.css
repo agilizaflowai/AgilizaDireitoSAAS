@@ -469,14 +469,28 @@ button:focus-visible {
 }
 
 .dropdown-item {
-  @apply px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 hover:text-slate-900 transition-colors duration-150 cursor-pointer;
+  @apply px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 hover:text-slate-900 transition-colors duration-150 cursor-pointer w-full;
   min-height: 44px;
   display: flex;
   align-items: center;
 }
 
+/* Variante preto e branco para ações destrutivas */
+.dropdown-item-danger {
+  @apply text-slate-900 hover:bg-gray-100 border-l-4 border-transparent;
+}
+.dropdown-item-danger:hover {
+  @apply border-slate-900;
+}
+
 .dark .dropdown-item {
   @apply text-gray-300 hover:bg-gray-700 hover:text-white;
+}
+.dark .dropdown-item-danger {
+  @apply text-white hover:bg-gray-700 border-l-4 border-transparent;
+}
+.dark .dropdown-item-danger:hover {
+  @apply border-white;
 }
 
 /* TOGGLE SWITCHES (ESTILO iOS) */
@@ -642,7 +656,7 @@ button:focus-visible {
 }
 
 .action-menu {
-  @apply absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-md shadow-lg z-10;
+  @apply absolute right-0 mt-2 w-30 bg-white border border-gray-200 rounded-md shadow-lg z-10;
   animation: slide-down 150ms ease-out;
 }
 
