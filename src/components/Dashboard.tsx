@@ -192,10 +192,10 @@ export default function Dashboard() {
                  </div>
                  
                  {/* Breakdown Detalhado */}
-                 <div className="grid grid-cols-2 gap-4">
+                 <div className={metrics.totalContratos === 1 ? "grid grid-cols-1 gap-4 justify-items-center" : "grid grid-cols-2 gap-4"}>
                    {/* Contratos Seguros */}
                    {metrics.contractsStatus.seguro > 0 && (
-                     <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-600 shadow-sm">
+                     <div className={`bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-600 shadow-sm ${metrics.totalContratos === 1 ? 'mx-auto w-[calc(50%-0.5rem)]' : ''}`}>
                        <div className="flex items-center justify-between mb-2">
                          <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Seguro</span>
                          <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
@@ -209,7 +209,7 @@ export default function Dashboard() {
                    
                    {/* Contratos com Atenção Necessária */}
                    {metrics.contractsStatus.atencaoNecessaria > 0 && (
-                     <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-600 shadow-sm">
+                     <div className={`bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-600 shadow-sm ${metrics.totalContratos === 1 ? 'mx-auto w-[calc(50%-0.5rem)]' : ''}`}>
                        <div className="flex items-center justify-between mb-2">
                          <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Atenção Necessária</span>
                          <div className="w-2 h-2 bg-amber-500 rounded-full"></div>
@@ -223,7 +223,7 @@ export default function Dashboard() {
                    
                    {/* Contratos de Alto Risco */}
                    {metrics.contractsStatus.altoRisco > 0 && (
-                     <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-600 shadow-sm">
+                     <div className={`bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-600 shadow-sm ${metrics.totalContratos === 1 ? 'mx-auto w-[calc(50%-0.5rem)]' : ''}`}>
                        <div className="flex items-center justify-between mb-2">
                          <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Alto Risco</span>
                          <div className="w-2 h-2 bg-red-500 rounded-full"></div>
@@ -237,7 +237,7 @@ export default function Dashboard() {
                    
                    {/* Outros Status */}
                    {metrics.contractsStatus.outros > 0 && (
-                     <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-600 shadow-sm">
+                     <div className={`bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-600 shadow-sm ${metrics.totalContratos === 1 ? 'mx-auto w-[calc(50%-0.5rem)]' : ''}`}>
                        <div className="flex items-center justify-between mb-2">
                          <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Outros</span>
                          <div className="w-2 h-2 bg-gray-500 rounded-full"></div>

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Calendar, Clock, User, MapPin, AlertCircle, CheckCircle } from 'lucide-react';
+import { useApp } from '../contexts/AppContext';
 
 interface Event {
   id: string;
@@ -108,8 +109,10 @@ const SimpleAgenda: React.FC = () => {
     });
   };
 
-  const EventCard = ({ event, showDate = false }: { event: Event; showDate?: boolean }) => (
-    <div className="flex items-start space-x-3 p-2 sm:p-3 rounded-lg border border-gray-100 dark:border-gray-600 hover:border-gray-200 dark:hover:border-gray-500 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all cursor-pointer group">
+  const { dispatch } = useApp();
+
+  const EventCard = ({ event, showDate = false, onClick }: { event: Event; showDate?: boolean; onClick?: () => void }) => (
+    <div className="flex items-start space-x-3 p-2 sm:p-3 rounded-lg border border-gray-100 dark:border-gray-600 hover:border-gray-200 dark:hover:border-gray-500 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all cursor-pointer group" onClick={onClick}>
       <div className="flex-shrink-0">
         <div
           className="w-3 h-3 rounded-full mt-1 group-hover:scale-110 transition-transform"
@@ -152,6 +155,14 @@ const SimpleAgenda: React.FC = () => {
     </div>
   );
 
+  // Navegar para Agenda Jurídica e abrir modal de edição
+  const handleOpenEvent = (event: Event) => {
+    dispatch({
+      type: 'NAVIGATE_TO_PAGE',
+      payload: { page: 'deadlines', params: { openEventId: event.id } }
+    });
+  };
+
   return (
     <div className="space-y-6">
       {/* Compromissos de Hoje */}
@@ -169,7 +180,7 @@ const SimpleAgenda: React.FC = () => {
         {todayEvents.length > 0 ? (
           <div className="space-y-2 sm:space-y-3 max-h-80 sm:max-h-96 overflow-y-auto">
             {todayEvents.map((event) => (
-              <EventCard key={event.id} event={event} />
+              <EventCard key={event.id} event={event} onClick={() => handleOpenEvent(event)} />
             ))}
           </div>
         ) : (
@@ -197,7 +208,7 @@ const SimpleAgenda: React.FC = () => {
         {weekEvents.length > 0 ? (
           <div className="space-y-2 sm:space-y-3 max-h-80 sm:max-h-96 overflow-y-auto">
             {weekEvents.slice(0, 5).map((event) => (
-              <EventCard key={event.id} event={event} showDate={true} />
+              <EventCard key={event.id} event={event} showDate={true} onClick={() => handleOpenEvent(event)} />
             ))}
             {weekEvents.length > 5 && (
               <div className="text-center py-2">

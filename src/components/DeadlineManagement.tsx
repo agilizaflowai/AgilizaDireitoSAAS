@@ -37,7 +37,7 @@ interface TimeSlot {
 }
 
 export default function DeadlineManagement() {
-  const { user } = useApp();
+  const { user, navigationParams, dispatch } = useApp();
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<ViewMode>('month');
   const [events, setEvents] = useState<Event[]>([]);
@@ -95,22 +95,48 @@ export default function DeadlineManagement() {
     return `${numbers.slice(0, 2)}:${numbers.slice(2, 4)}`;
   };
 
-  // Função para converter data DD/MM/YYYY para YYYY-MM-DD
+  // Função para converter data DD/MM/YYYY para YYYY-MM-DD (com validação)
   const convertDateToISO = (dateStr: string) => {
-    if (dateStr.length === 10 && dateStr.includes('/')) {
-      const [day, month, year] = dateStr.split('/');
-      return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+    try {
+      const str = dateStr.trim().replace(/-/g, '/');
+      const parts = str.split('/');
+      if (parts.length === 3) {
+        const [dayStr, monthStr, yearStr] = parts;
+        const day = parseInt(dayStr, 10);
+        const month = parseInt(monthStr, 10);
+        const year = parseInt(yearStr, 10);
+        if (!isNaN(day) && !isNaN(month) && !isNaN(year) && day >= 1 && day <= 31 && month >= 1 && month <= 12 && yearStr.length === 4) {
+          return `${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+        }
+        console.warn('#problems_and_diagnostics: data inválida (DD/MM/YYYY)', { dateStr });
+      }
+      return dateStr;
+    } catch (e) {
+      console.warn('#problems_and_diagnostics: falha ao converter data para ISO', e);
+      return dateStr;
     }
-    return dateStr;
   };
 
-  // Função para converter data YYYY-MM-DD para DD/MM/YYYY
+  // Função para converter data YYYY-MM-DD para DD/MM/YYYY (com validação)
   const convertDateFromISO = (dateStr: string) => {
-    if (dateStr.length === 10 && dateStr.includes('-')) {
-      const [year, month, day] = dateStr.split('-');
-      return `${day}/${month}/${year}`;
+    try {
+      const str = dateStr.trim().replace(/\//g, '-');
+      const parts = str.split('-');
+      if (parts.length === 3) {
+        const [yearStr, monthStr, dayStr] = parts;
+        const day = parseInt(dayStr, 10);
+        const month = parseInt(monthStr, 10);
+        const year = parseInt(yearStr, 10);
+        if (!isNaN(day) && !isNaN(month) && !isNaN(year) && day >= 1 && day <= 31 && month >= 1 && month <= 12 && yearStr.length === 4) {
+          return `${String(day).padStart(2,'0')}/${String(month).padStart(2,'0')}/${year}`;
+        }
+        console.warn('#problems_and_diagnostics: data inválida (YYYY-MM-DD)', { dateStr });
+      }
+      return dateStr;
+    } catch (e) {
+      console.warn('#problems_and_diagnostics: falha ao converter data de ISO', e);
+      return dateStr;
     }
-    return dateStr;
   };
 
   // Função para salvar eventos no localStorage
@@ -187,6 +213,19 @@ export default function DeadlineManagement() {
       saveEventsToStorage(events);
     }
   }, [events]);
+
+  // Abrir modal de edição automaticamente quando navegar com openEventId
+  useEffect(() => {
+    const id = navigationParams?.openEventId;
+    if (id && events.length && !showModal) {
+      const ev = events.find(e => e.id === id);
+      if (ev) {
+        openModal(undefined, undefined, ev);
+        // Limpar params para evitar reabertura
+        dispatch({ type: 'NAVIGATE_TO_PAGE', payload: { page: 'deadlines', params: null } });
+      }
+    }
+  }, [navigationParams, events, showModal]);
 
   const monthNames = [
     'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',

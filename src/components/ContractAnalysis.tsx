@@ -305,12 +305,21 @@ export default function ContractAnalysis() {
       console.log('Enviando requisição para webhook:', webhookUrl);
       console.log('Headers configurados:', Object.keys(headers));
       
-      const response = await makeRequestWithRetry(webhookUrl, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(payload),
-        mode: 'cors'
-      });
+      let response: Response;
+      try {
+        response = await makeRequestWithRetry(webhookUrl, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify(payload)
+        });
+      } catch (proxyErr) {
+        console.warn('Falha via proxy /api/webhook, tentando URL direta do n8n...', proxyErr);
+        response = await makeRequestWithRetry(defaultWebhook, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify(payload)
+        });
+      }
 
       if (!response.ok) {
         const errorText = await response.text();
