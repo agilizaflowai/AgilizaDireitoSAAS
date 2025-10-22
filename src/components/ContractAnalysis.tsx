@@ -291,21 +291,25 @@ export default function ContractAnalysis() {
         timestamp: new Date().toISOString()
       };
 
-      // Usar proxy local para evitar problemas de CORS
-      const webhookUrl = '/api/webhook';
+      // Seleciona URL do webhook: proxy em dev, absoluto em produção
+      const defaultWebhook = 'https://n8n-n8n.04qisd.easypanel.host/webhook/juridico/analise-de-contratos';
+      const envWebhook = (import.meta as any).env?.VITE_WEBHOOK_CONTRATOS_URL;
+      const isLocalhost = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+      const webhookUrl = envWebhook || (isLocalhost ? '/api/webhook' : defaultWebhook);
       
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
         'Accept': 'application/json'
       };
       
-      console.log('Enviando requisição via proxy para:', webhookUrl);
+      console.log('Enviando requisição para webhook:', webhookUrl);
       console.log('Headers configurados:', Object.keys(headers));
       
       const response = await makeRequestWithRetry(webhookUrl, {
         method: 'POST',
         headers,
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
+        mode: 'cors'
       });
 
       if (!response.ok) {
