@@ -410,11 +410,11 @@ export default function ProcessFilter() {
       const dateB = new Date(b.details?.data_inicio || b.data || '1900-01-01');
       
       if (filters.sortOrder === 'mais_recentes') {
-        // Mais recentes primeiro (data mais próxima de hoje)
-        return dateA.getTime() - dateB.getTime();
-      } else {
-        // Mais antigos primeiro (data mais distante de hoje)
+        // Mais recentes primeiro (datas mais novas primeiro)
         return dateB.getTime() - dateA.getTime();
+      } else {
+        // Mais antigos primeiro (datas mais antigas primeiro)
+        return dateA.getTime() - dateB.getTime();
       }
     });
 
