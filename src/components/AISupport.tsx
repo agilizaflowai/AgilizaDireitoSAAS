@@ -13,6 +13,7 @@ interface Message {
 interface ChatMessage {
   id: number;
   session_id: string;
+  nome_usuario?: string;
   message: {
     type: 'human' | 'ai';
     content: string;
@@ -43,6 +44,11 @@ export default function AISupport() {
   const [isAIActive, setIsAIActive] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const realtimeChannelRef = useRef<any>(null);
+  // Controle de polling e último ID visto para evitar duplicações
+  const lastMessageIdRef = useRef<number>(0);
+  const pollingIntervalRef = useRef<any>(null);
+  // IDs de mensagens já processadas (evita duplicação entre realtime e polling)
+  const processedMessageIdsRef = useRef<Set<number>>(new Set());
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -115,6 +121,10 @@ export default function AISupport() {
         }
 
         const conversation = conversationsMap.get(sessionId)!;
+        // Se houver nome_usuario nesta mensagem, atualiza o nome da conversa
+        if (chatMessage.nome_usuario && chatMessage.nome_usuario.trim().length > 0) {
+          conversation.clientName = chatMessage.nome_usuario;
+        }
         const senderType: 'client' | 'ai' | 'lawyer' =
           chatMessage.message.type === 'ai'
             ? 'ai'
@@ -261,7 +271,13 @@ export default function AISupport() {
           date: new Date(createdAt).toISOString().split('T')[0],
         };
 
-        // Atualiza lista de conversas (com anti-duplicação da mensagem temporária)
+        // Evita duplicar se já processado por polling ou outro evento
+        if (processedMessageIdsRef.current.has(msg.id)) {
+          lastMessageIdRef.current = Math.max(lastMessageIdRef.current, msg.id);
+          return;
+        }
+
+        // Atualiza lista de conversas (com anti-duplicação por id e substituição da temporária)
         setConversations((prev) => {
           const idx = prev.findIndex((c) => c.id === sessionId);
           if (idx === -1) {
@@ -281,14 +297,30 @@ export default function AISupport() {
 
           const updated = [...prev];
           const conv = updated[idx];
+          // Se já existe mensagem com o mesmo id, não adiciona novamente
+          const alreadyExists = conv.messages.some((m) => m.id === msg.id);
+          if (alreadyExists) {
+            // Ainda assim atualiza clientName se houver nome válido
+            updated[idx] = {
+              ...conv,
+              clientName: chatMessage?.nome_usuario && chatMessage?.nome_usuario.trim().length > 0 ? chatMessage.nome_usuario : conv.clientName,
+              lastMessage: msg.message,
+              lastMessageTime: msg.timestamp,
+            };
+            return updated;
+          }
+          // Remove qualquer placeholder temporário com o mesmo conteúdo/remetente antes de adicionar a oficial
+          const withoutTempDup = conv.messages.filter((m) => !(typeof m.id === 'number' && m.id > 1e11 && m.sender === msg.sender && m.message === msg.message));
           const existingLast = conv.messages[conv.messages.length - 1];
           const isTempDuplicate = existingLast && existingLast.sender === msg.sender && existingLast.message === msg.message && typeof existingLast.id === 'number' && existingLast.id > 1e11; // Date.now()
           const newMessages = isTempDuplicate
             ? [...conv.messages.slice(0, -1), msg]
-            : [...conv.messages, msg];
+            : [...withoutTempDup, msg];
 
           updated[idx] = {
             ...conv,
+            // Atualiza clientName se vier nome_usuario válido
+            clientName: chatMessage?.nome_usuario && chatMessage?.nome_usuario.trim().length > 0 ? chatMessage.nome_usuario : conv.clientName,
             messages: newMessages,
             lastMessage: msg.message,
             lastMessageTime: msg.timestamp,
@@ -296,22 +328,39 @@ export default function AISupport() {
           return updated;
         });
 
-        // Atualiza conversa selecionada se o evento for da mesma sessão
+        // Atualiza conversa selecionada se o evento for da mesma sessão (com anti-duplicação por id)
         setSelectedConversation((prev) => {
           if (!prev || prev.id !== sessionId) return prev;
+          // Não adiciona se já existir uma mensagem com o mesmo id
+          const idExists = prev.messages.some((m) => m.id === msg.id);
+          if (idExists) {
+            return {
+              ...prev,
+              clientName: chatMessage?.nome_usuario && chatMessage?.nome_usuario.trim().length > 0 ? chatMessage.nome_usuario : prev.clientName,
+              lastMessage: msg.message,
+              lastMessageTime: msg.timestamp,
+            };
+          }
+          // Remove placeholder temporário correspondente na conversa selecionada
+          const withoutTempDup = prev.messages.filter((m) => !(typeof m.id === 'number' && m.id > 1e11 && m.sender === msg.sender && m.message === msg.message));
           const existingLast = prev.messages[prev.messages.length - 1];
           const isTempDuplicate = existingLast && existingLast.sender === msg.sender && existingLast.message === msg.message && typeof existingLast.id === 'number' && existingLast.id > 1e11;
           const newMessages = isTempDuplicate
             ? [...prev.messages.slice(0, -1), msg]
-            : [...prev.messages, msg];
+            : [...withoutTempDup, msg];
 
           return {
             ...prev,
+            clientName: chatMessage?.nome_usuario && chatMessage?.nome_usuario.trim().length > 0 ? chatMessage.nome_usuario : prev.clientName,
             messages: newMessages,
             lastMessage: msg.message,
             lastMessageTime: msg.timestamp,
           };
         });
+
+        // Marca este id como processado e atualiza último ID visto
+        processedMessageIdsRef.current.add(msg.id);
+        lastMessageIdRef.current = Math.max(lastMessageIdRef.current, msg.id);
       })
       .subscribe();
 
@@ -321,6 +370,139 @@ export default function AISupport() {
       if (realtimeChannelRef.current) {
         supabase.removeChannel(realtimeChannelRef.current);
         realtimeChannelRef.current = null;
+      }
+    };
+  }, []);
+
+  // Polling de novos registros na tabela chat a cada 1s
+  useEffect(() => {
+    let isMounted = true;
+
+    const initLastId = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('chat')
+          .select('id')
+          .order('id', { ascending: false })
+          .limit(1);
+        if (!error && data && data[0]?.id) {
+          lastMessageIdRef.current = data[0].id as number;
+        }
+      } catch (e) {
+        console.warn('Polling: falha ao inicializar último ID', e);
+      }
+    };
+
+    initLastId();
+
+    pollingIntervalRef.current = setInterval(async () => {
+      if (!isMounted) return;
+      try {
+        const { data: newRows, error } = await supabase
+          .from('chat')
+          .select('*')
+          .gt('id', lastMessageIdRef.current)
+          .order('id', { ascending: true });
+
+        if (error) {
+          console.warn('Polling: erro ao consultar novos registros', error);
+          return;
+        }
+
+        if (!newRows || newRows.length === 0) return;
+
+        newRows.forEach((chatMessage: any) => {
+          const sessionId: string = chatMessage.session_id;
+          const createdAt: string = chatMessage.created_at || new Date().toISOString();
+
+          const senderType: 'client' | 'ai' | 'lawyer' =
+            chatMessage?.message?.type === 'ai'
+              ? 'ai'
+              : chatMessage?.message?.additional_kwargs?.sender === 'lawyer'
+                ? 'lawyer'
+                : 'client';
+
+          const msg: Message = {
+            id: chatMessage.id,
+            sender: senderType,
+            message: chatMessage?.message?.content ?? '',
+            timestamp: new Date(createdAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+            date: new Date(createdAt).toISOString().split('T')[0],
+          };
+
+          // Evita duplicação se o realtime já processou esta mensagem
+          if (processedMessageIdsRef.current.has(msg.id)) {
+            lastMessageIdRef.current = Math.max(lastMessageIdRef.current, msg.id);
+            return;
+          }
+
+          // Atualiza lista de conversas com anti-duplicação por ID
+          setConversations((prev) => {
+            const idx = prev.findIndex((c) => c.id === sessionId);
+            if (idx === -1) {
+              const phoneNumber = (sessionId || '').replace('@s.whatsapp.net', '');
+              const newConv: Conversation = {
+                id: sessionId,
+                clientName: chatMessage?.nome_usuario || `Cliente ${phoneNumber.slice(-4)}`,
+                clientPhone: phoneNumber,
+                status: 'online',
+                lastMessage: msg.message,
+                lastMessageTime: msg.timestamp,
+                unreadCount: 0,
+                messages: [msg],
+              };
+              return [newConv, ...prev];
+            }
+
+            const updated = [...prev];
+            const conv = updated[idx];
+            const alreadyExists = conv.messages.some((m) => m.id === msg.id);
+            // Remove placeholder temporário com mesmo conteúdo/remetente antes de adicionar
+            const withoutTempDup = conv.messages.filter((m) => !(typeof m.id === 'number' && m.id > 1e11 && m.sender === msg.sender && m.message === msg.message));
+            const newMessages = alreadyExists ? conv.messages : [...withoutTempDup, msg];
+
+            updated[idx] = {
+              ...conv,
+              // Se houver nome_usuario válido, atualiza o nome exibido da conversa
+              clientName: chatMessage?.nome_usuario && chatMessage?.nome_usuario.trim().length > 0 ? chatMessage.nome_usuario : conv.clientName,
+              messages: newMessages,
+              lastMessage: msg.message,
+              lastMessageTime: msg.timestamp,
+            };
+            return updated;
+          });
+
+          // Atualiza conversa selecionada se for a mesma sessão
+          setSelectedConversation((prev) => {
+            if (!prev || prev.id !== sessionId) return prev;
+            const alreadyExists = prev.messages.some((m) => m.id === msg.id);
+            const withoutTempDup = prev.messages.filter((m) => !(typeof m.id === 'number' && m.id > 1e11 && m.sender === msg.sender && m.message === msg.message));
+            const newMessages = alreadyExists ? prev.messages : [...withoutTempDup, msg];
+            return {
+              ...prev,
+              // Atualiza clientName na conversa selecionada, se disponível
+              clientName: chatMessage?.nome_usuario && chatMessage?.nome_usuario.trim().length > 0 ? chatMessage.nome_usuario : prev.clientName,
+              messages: newMessages,
+              lastMessage: msg.message,
+              lastMessageTime: msg.timestamp,
+            };
+          });
+
+          // Marca este id como processado
+          processedMessageIdsRef.current.add(msg.id);
+        });
+
+        lastMessageIdRef.current = Math.max(lastMessageIdRef.current, newRows[newRows.length - 1].id as number);
+      } catch (e) {
+        console.warn('Polling: exceção ao consultar novos registros', e);
+      }
+    }, 1000);
+
+    return () => {
+      isMounted = false;
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
       }
     };
   }, []);
