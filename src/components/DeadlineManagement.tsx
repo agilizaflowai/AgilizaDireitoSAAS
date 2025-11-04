@@ -3,6 +3,7 @@ import { Calendar, Clock, Plus, ChevronLeft, ChevronRight, Grid3X3, List, Eye, X
 import PageHeader from './PageHeader';
 import ConfirmModal from './ConfirmModal';
 import { useApp } from '../contexts/AppContext';
+import { supabase } from '../supabaseClient';
 
 interface Event {
   id: string;
@@ -46,6 +47,10 @@ export default function DeadlineManagement() {
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<string>('');
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [eventToDelete, setEventToDelete] = useState<string | null>(null);
+  // Modal de validação (estilo do site, igual ao excluir)
+  const [showValidationModal, setShowValidationModal] = useState(false);
+  const [validationTitle, setValidationTitle] = useState<string>('Atenção');
+  const [validationMessage, setValidationMessage] = useState<string>('');
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -318,6 +323,20 @@ export default function DeadlineManagement() {
     return calendar;
   };
 
+  // Helpers: traduz valores internos para rótulos em português
+  const toPortugueseType = (t: Event['type']) => ({
+    appointment: 'Compromisso',
+    meeting: 'Reunião',
+    court: 'Audiência',
+    deadline: 'Prazo',
+  }[t] || t);
+
+  const toPortuguesePriority = (p: Event['priority']) => ({
+    low: 'Baixa',
+    medium: 'Média',
+    high: 'Alta',
+  }[p] || p);
+
   const generateWeekDays = (): CalendarDay[] => {
     const startOfWeek = new Date(selectedDate);
     const day = startOfWeek.getDay();
@@ -425,23 +444,87 @@ export default function DeadlineManagement() {
   };
 
   // Função para criar um novo evento
-  const createEvent = (eventData: Omit<Event, 'id'>) => {
+  const createEvent = async (eventData: Omit<Event, 'id'>) => {
+    // Tenta salvar no Supabase e usar o ID retornado; em caso de falha, mantém fallback local
+    let generatedId = Date.now().toString() + Math.random().toString(36).substr(2, 9);
+    try {
+      const { data, error } = await supabase
+        .from('agendamentos')
+        .insert([
+          {
+            titulo: eventData.title,
+            descricao: eventData.description || null,
+            data: eventData.date,
+            inicio: eventData.startTime,
+            fim: eventData.endTime,
+            tipo: toPortugueseType(eventData.type),
+            prioridade: toPortuguesePriority(eventData.priority),
+            cliente: eventData.client || null,
+            local: eventData.location || null,
+            responsavel: eventData.responsible || null,
+            cor: eventData.color,
+          },
+        ])
+        .select('id');
+
+      if (error) {
+        console.error('Erro ao salvar agendamento no Supabase:', error);
+      } else if (data && data[0]?.id) {
+        generatedId = data[0].id as string;
+      }
+    } catch (e) {
+      console.error('Exceção ao salvar agendamento no Supabase:', e);
+    }
+
     const newEvent: Event = {
       ...eventData,
-      id: Date.now().toString() + Math.random().toString(36).substr(2, 9)
+      id: generatedId,
     };
-    
+
     setEvents(prev => {
       const updatedEvents = [...prev, newEvent];
       saveEventsToStorage(updatedEvents);
       return updatedEvents;
     });
-    
+
     return newEvent;
   };
 
   // Função para atualizar um evento existente
-  const updateEvent = (id: string, eventData: Partial<Event>) => {
+  const updateEvent = async (id: string, eventData: Partial<Event>) => {
+    // Atualiza Supabase quando o ID é um UUID (registros criados no banco)
+    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+    const current = getEventById(id);
+    const merged: Event | null = current ? { ...current, ...eventData } as Event : null;
+
+    if (isUUID && merged) {
+      try {
+        const { error } = await supabase
+          .from('agendamentos')
+          .update({
+            titulo: merged.title,
+            descricao: merged.description || null,
+            data: merged.date,
+            inicio: merged.startTime,
+            fim: merged.endTime,
+            tipo: toPortugueseType(merged.type),
+            prioridade: toPortuguesePriority(merged.priority),
+            cliente: merged.client || null,
+            local: merged.location || null,
+            responsavel: merged.responsible || null,
+            cor: merged.color,
+          })
+          .eq('id', id);
+
+        if (error) {
+          console.error('Erro ao atualizar agendamento no Supabase:', error);
+        }
+      } catch (e) {
+        console.error('Exceção ao atualizar agendamento no Supabase:', e);
+      }
+    }
+
+    // Atualiza estado local e storage
     setEvents(prev => {
       const updatedEvents = prev.map(event => 
         event.id === id ? { ...event, ...eventData } : event
@@ -452,7 +535,24 @@ export default function DeadlineManagement() {
   };
 
   // Função para excluir um evento
-  const removeEvent = (id: string) => {
+  const removeEvent = async (id: string) => {
+    // Tenta excluir no Supabase quando o ID é UUID
+    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+    if (isUUID) {
+      try {
+        const { error } = await supabase
+          .from('agendamentos')
+          .delete()
+          .eq('id', id);
+        if (error) {
+          console.error('Erro ao excluir agendamento no Supabase:', error);
+        }
+      } catch (e) {
+        console.error('Exceção ao excluir agendamento no Supabase:', e);
+      }
+    }
+
+    // Remover localmente e atualizar storage
     setEvents(prev => {
       const updatedEvents = prev.filter(event => event.id !== id);
       saveEventsToStorage(updatedEvents);
@@ -465,12 +565,26 @@ export default function DeadlineManagement() {
     return events.find(event => event.id === id);
   };
 
-  const saveEvent = () => {
+  const saveEvent = async () => {
     // Converter data formatada para ISO antes de validar
     const isoDate = convertDateToISO(displayDate);
     
     if (!formData.title || !isoDate || !displayStartTime || !displayEndTime) {
-      alert('Por favor, preencha todos os campos obrigatórios.');
+      setValidationTitle('Campos obrigatórios');
+      setValidationMessage('Por favor, preencha todos os campos obrigatórios.');
+      setShowValidationModal(true);
+      return;
+    }
+
+    // Regra: fim deve ser maior que início
+    const [startHour, startMinute] = displayStartTime.split(':').map(Number);
+    const [endHour, endMinute] = displayEndTime.split(':').map(Number);
+    const startTotalMinutes = startHour * 60 + startMinute;
+    const endTotalMinutes = endHour * 60 + endMinute;
+    if (endTotalMinutes <= startTotalMinutes) {
+      setValidationTitle('Horário inválido');
+      setValidationMessage('O horário de fim deve ser maior que o horário de início.');
+      setShowValidationModal(true);
       return;
     }
 
@@ -483,18 +597,18 @@ export default function DeadlineManagement() {
       type: formData.type,
       priority: formData.priority,
       client: formData.client,
-      responsible: user?.name || 'Usuário',
+      responsible: formData.responsible || user?.name || 'Usuário',
       location: formData.location,
       color: formData.color,
       status: editingEvent?.status || 'pending'
     };
 
     if (editingEvent) {
-      // Atualizar evento existente
-      updateEvent(editingEvent.id, eventData);
+      // Atualizar evento existente e refletir no Supabase quando possível
+      await updateEvent(editingEvent.id, eventData);
     } else {
-      // Criar novo evento
-      createEvent(eventData);
+      // Criar novo evento: salva local e insere no Supabase
+      await createEvent(eventData);
     }
 
     closeModal();
@@ -507,11 +621,11 @@ export default function DeadlineManagement() {
     console.log('✅ Modal de confirmação deve aparecer');
   };
 
-  const confirmDeleteEvent = () => {
+  const confirmDeleteEvent = async () => {
     console.log('✅ confirmDeleteEvent chamado, eventToDelete:', eventToDelete);
     if (eventToDelete) {
       console.log('🗑️ Removendo evento:', eventToDelete);
-      removeEvent(eventToDelete);
+      await removeEvent(eventToDelete);
       setEventToDelete(null);
       setShowConfirmModal(false);
       closeModal(); // Fechar modal se estiver aberto
@@ -1285,9 +1399,13 @@ export default function DeadlineManagement() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Responsável</label>
-                  <div className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-600 text-gray-900 dark:text-white">
-                    Dra. Júlia Rabello
-                  </div>
+                  <input
+                    type="text"
+                    value={formData.responsible}
+                    onChange={(e) => setFormData(prev => ({ ...prev, responsible: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-400"
+                    placeholder="Responsável pelo agendamento"
+                  />
                 </div>
 
                 <div>
@@ -1349,6 +1467,18 @@ export default function DeadlineManagement() {
         message="Tem certeza que deseja excluir este evento? Esta ação não pode ser desfeita."
         confirmText="OK"
         cancelText="Cancelar"
+        variant="danger"
+      />
+
+      {/* Modal de validação para avisos do site (sem alerta nativo) */}
+      <ConfirmModal
+        isOpen={showValidationModal}
+        onConfirm={() => {}}
+        onClose={() => setShowValidationModal(false)}
+        title={validationTitle}
+        message={validationMessage}
+        confirmText="OK"
+        cancelText="Fechar"
         variant="danger"
       />
     </div>
