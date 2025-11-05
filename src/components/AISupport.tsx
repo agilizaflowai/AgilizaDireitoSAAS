@@ -54,19 +54,40 @@ export default function AISupport() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  // Função para limpar partes específicas das mensagens
+  // Função para limpar/filtrar mensagens e remover duplicações consecutivas
   const cleanMessageContent = (messages: Message[]) => {
-    const isSystemNoise = (text: string) => /^workflow(\swas)?\sstarted$/i.test(text.trim());
-    return messages
-      .filter(message => !isSystemNoise(message.message || ''))
-      .map(message => ({
-        ...message,
-        message: message.message
+    const isSystemNoise = (text: string) => {
+      const t = (text || '').trim();
+      if (/^workflow(\swas)?\sstarted$/i.test(t)) return true;
+      // Ocultar mensagens automáticas de direcionamento/transferência
+      if (/vou\s+direcionar.*(novo|novos)\s+clientes/i.test(t)) return true;
+      if (/vou\s+transferir\s+você/i.test(t)) return true;
+      if (/vou\s+conectar\s+voc[eê]/i.test(t)) return true;
+      return false;
+    };
+
+    // Normaliza conteúdo (remove marcadores) e filtra ruídos
+    const normalized = messages
+      .map((m) => ({
+        ...m,
+        message: (m.message || '')
           .replace(/TIPO_CLIENTE=EXISTENTE/gi, '')
           .replace(/TIPO_CLIENTE=NOVO/gi, '')
           .replace(/\s+/g, ' ')
           .trim()
-      }));
+      }))
+      .filter((m) => !isSystemNoise(m.message));
+
+    // Remove duplicações consecutivas de mesmo remetente e mesmo conteúdo
+    const deduped: Message[] = [];
+    for (const m of normalized) {
+      const last = deduped[deduped.length - 1];
+      if (last && last.sender === m.sender && last.message === m.message) {
+        continue;
+      }
+      deduped.push(m);
+    }
+    return deduped;
   };
 
   useEffect(() => {
