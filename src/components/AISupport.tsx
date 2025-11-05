@@ -912,7 +912,7 @@ export default function AISupport() {
               onClick={() => setSelectedConversation(conversation)}
               className={`mx-3 my-2 p-4 rounded-xl cursor-pointer transition-all duration-200 ${
                 selectedConversation?.id === conversation.id 
-                  ? 'bg-black dark:bg-white text-white dark:text-black shadow-lg' 
+                  ? 'bg-black dark:bg-gray-900 text-white dark:text-white shadow-lg border border-gray-700' 
                   : 'bg-white dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 shadow-sm hover:shadow-md'
               }`}
             >
@@ -921,18 +921,18 @@ export default function AISupport() {
                   <div className="relative flex-shrink-0">
                     <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
                       selectedConversation?.id === conversation.id 
-                        ? 'bg-white bg-opacity-20' 
+                        ? 'bg-white bg-opacity-20 dark:bg-black dark:bg-opacity-20' 
                         : 'bg-gray-100 dark:bg-gray-600'
                     }`}>
                       <User className={`h-6 w-6 ${
                         selectedConversation?.id === conversation.id 
-                          ? 'text-white dark:text-black' 
+                          ? 'text-white dark:text-white' 
                           : 'text-gray-600 dark:text-gray-300'
                       }`} />
                     </div>
                     <div className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 ${
                       selectedConversation?.id === conversation.id 
-                        ? 'border-black dark:border-white' 
+                        ? 'border-black dark:border-gray-900' 
                         : 'border-white dark:border-gray-700'
                     } ${getStatusColor(conversation.status)}`}></div>
                   </div>
@@ -940,14 +940,14 @@ export default function AISupport() {
                     <div className="flex items-center justify-between mb-1 min-w-0">
                       <h4 className={`font-semibold truncate flex-1 min-w-0 ${
                         selectedConversation?.id === conversation.id 
-                          ? 'text-white dark:text-black' 
+                          ? 'text-white dark:text-white' 
                           : 'text-gray-900 dark:text-white'
                       }`}>
                         {conversation.clientName}
                       </h4>
                       <span className={`text-xs ml-2 flex-shrink-0 ${
                         selectedConversation?.id === conversation.id 
-                          ? 'text-gray-300 dark:text-gray-600' 
+                          ? 'text-gray-300 dark:text-gray-400' 
                           : 'text-gray-500 dark:text-gray-400'
                       }`}>
                         {conversation.lastMessageTime}
@@ -955,14 +955,14 @@ export default function AISupport() {
                     </div>
                     <p className={`text-xs mb-2 truncate ${
                       selectedConversation?.id === conversation.id 
-                        ? 'text-gray-300 dark:text-gray-600' 
+                        ? 'text-gray-300 dark:text-gray-400' 
                         : 'text-gray-500 dark:text-gray-400'
                     }`}>
                       {conversation.clientPhone}
                     </p>
                     <p className={`text-sm truncate ${
                       selectedConversation?.id === conversation.id 
-                        ? 'text-gray-200 dark:text-gray-700' 
+                        ? 'text-gray-200 dark:text-gray-300' 
                         : 'text-gray-600 dark:text-gray-300'
                     }`}>
                       {conversation.lastMessage || 'Nenhuma mensagem ainda'}
@@ -973,7 +973,7 @@ export default function AISupport() {
                   <div className="ml-2 flex-shrink-0">
                     <span className={`inline-flex items-center justify-center w-6 h-6 text-xs font-bold rounded-full ${
                       selectedConversation?.id === conversation.id 
-                        ? 'bg-white text-black dark:bg-black dark:text-white' 
+                        ? 'bg-white text-black dark:bg-gray-800 dark:text-white' 
                         : 'bg-black text-white dark:bg-white dark:text-black'
                     }`}>
                       {conversation.unreadCount}
