@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType } from 'docx';
 import { saveAs } from 'file-saver';
-import { ArrowLeft, ArrowRight, Download, Eye, FileText, X } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Download, Eye, FileText, X, Pencil } from 'lucide-react';
 import StepIndicator from './StepIndicator';
 import { supabase } from '../supabaseClient';
 
@@ -1192,43 +1192,50 @@ OUTORGANTE`;
   );
 
   const renderStep2 = () => (
-    <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 shadow-sm">
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
-          Revisão do Documento
-        </h2>
-        {((documentType === 'contestacao' && contestacaoData) || 
-          (documentType === 'recurso' && recursoData) || 
+    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 shadow">
+      {(() => {
+        const hasContent = (
+          (documentType === 'contestacao' && contestacaoData) ||
+          (documentType === 'recurso' && recursoData) ||
           (documentType === 'procuracao' && procuracaoData) ||
-          (documentType !== 'contestacao' && documentType !== 'recurso' && documentType !== 'procuracao' && generatedDoc)) && (
-          <div className="flex space-x-2">
-            {isEditing ? (
-              <>
-                <button
-                  onClick={handleSaveEdit}
-                  className="flex items-center px-3 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm"
-                >
-                  Salvar
-                </button>
-                <button
-                  onClick={handleCancelEdit}
-                  className="flex items-center px-3 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 text-sm"
-                >
-                  Cancelar
-                </button>
-              </>
-            ) : (
-              <button
-                onClick={handleEditToggle}
-                className="flex items-center px-3 py-2 bg-gray-900 text-white rounded-md hover:bg-black text-sm"
-              >
-                <Eye className="h-4 w-4 mr-2" />
-                Editar
-              </button>
+          (documentType !== 'contestacao' && documentType !== 'recurso' && documentType !== 'procuracao' && generatedDoc)
+        );
+        return (
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Revisão de Documentos</h2>
+            {hasContent && (
+              <div className="flex space-x-2">
+                {isEditing ? (
+                  <>
+                    <button
+                      onClick={handleSaveEdit}
+                      className="btn-primary text-sm px-4 py-2"
+                    >
+                      Salvar
+                    </button>
+                    <button
+                      onClick={handleCancelEdit}
+                      className="btn-secondary text-sm px-4 py-2"
+                    >
+                      Cancelar
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    onClick={handleEditToggle}
+                    className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md border border-gray-900 text-gray-900 hover:bg-gray-900 hover:text-white transition-colors text-xs dark:border-gray-200 dark:text-gray-200 dark:hover:bg-white dark:hover:text-black"
+                    aria-label="Editar seção"
+                    title="Editar"
+                  >
+                    <Pencil className="h-3 w-3" />
+                    Editar
+                  </button>
+                )}
+              </div>
             )}
           </div>
-        )}
-      </div>
+        );
+      })()}
       
       {isGenerating ? (
         <div className="flex items-center justify-center py-12">
@@ -1241,16 +1248,16 @@ OUTORGANTE`;
            (documentType === 'recurso' && recursoData) || 
            (documentType === 'procuracao' && procuracaoData) ||
            (documentType !== 'contestacao' && documentType !== 'recurso' && documentType !== 'procuracao' && generatedDoc) ? (
-        <div className="bg-gray-50 dark:bg-gray-700 rounded-md p-6 max-h-96 overflow-y-auto">
+        <div className="bg-white dark:bg-gray-900 rounded-xl p-6 shadow border border-gray-200 dark:border-gray-700 max-h-96 overflow-y-auto">
           {isEditing ? (
             <textarea
               value={editedContent}
               onChange={(e) => setEditedContent(e.target.value)}
-              className="w-full h-80 p-4 text-sm text-gray-800 dark:text-gray-200 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md font-mono leading-relaxed resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full h-80 p-4 text-base text-slate-900 dark:text-white bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md leading-relaxed resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="Edite o conteúdo do documento aqui..."
             />
           ) : (
-            <pre className="whitespace-pre-wrap text-sm text-gray-800 dark:text-gray-200 font-mono leading-relaxed">
+            <div className="whitespace-pre-wrap text-base text-slate-900 dark:text-white leading-relaxed">
               {/* Para contestação, recurso e procuração, mostrar conteúdo editado ou dados do Supabase */}
               {documentType === 'contestacao' ? (
                 editedContent || contestacaoData?.documento_gerado || 'Aguardando dados do Supabase...'
@@ -1261,7 +1268,7 @@ OUTORGANTE`;
               ) : (
                 editedContent || generatedDoc?.content
               )}
-            </pre>
+            </div>
           )}
         </div>
       ) : (
@@ -1270,6 +1277,31 @@ OUTORGANTE`;
           <p className="text-gray-600 dark:text-gray-400">Documento será gerado automaticamente</p>
         </div>
       )}
+
+      {/* Ações dentro da card, seguindo o design de “Pedidos” */}
+      {(() => {
+        const hasContent = (
+          (documentType === 'contestacao' && contestacaoData) ||
+          (documentType === 'recurso' && recursoData) ||
+          (documentType === 'procuracao' && procuracaoData) ||
+          (documentType !== 'contestacao' && documentType !== 'recurso' && documentType !== 'procuracao' && generatedDoc)
+        );
+        return (
+          <div className="flex justify-between mt-6">
+            <button onClick={prevStep} className="btn-secondary px-6 py-3">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Voltar
+            </button>
+            <button
+              onClick={downloadDocx}
+              disabled={!hasContent}
+              className="bg-black text-white px-6 py-3 rounded-lg font-medium hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              📄 Gerar Documento
+            </button>
+          </div>
+        );
+      })()}
     </div>
   );
 
@@ -1288,17 +1320,17 @@ OUTORGANTE`;
       {currentStep === 0 && renderStep1()}
       {currentStep === 1 && renderStep2()}
 
-      <div className="flex justify-between">
-        <button
-          onClick={prevStep}
-          disabled={currentStep === 0}
-          className="btn-secondary px-6 py-3 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Anterior
-        </button>
+      {currentStep === 0 && (
+        <div className="flex justify-between">
+          <button
+            onClick={prevStep}
+            disabled={currentStep === 0}
+            className="btn-secondary px-6 py-3 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Anterior
+          </button>
 
-        {currentStep < steps.length - 1 ? (
           <button
             onClick={nextStep}
             disabled={!formData.title || !formData.clientName || !formData.description || isLoadingNextStep}
@@ -1313,16 +1345,8 @@ OUTORGANTE`;
               'Avançar →'
             )}
           </button>
-        ) : (
-          <button
-            onClick={downloadDocx}
-            disabled={!generatedDoc && documentType !== 'contestacao'}
-            className="bg-black text-white px-6 py-3 rounded-lg font-medium hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            📄 Gerar Documento
-          </button>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 };

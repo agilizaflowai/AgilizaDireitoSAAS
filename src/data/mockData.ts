@@ -116,6 +116,7 @@ export const urgencyLevels = [
 ];
 
 export const documentTypes = [
+  { id: 'peticao_simples', name: 'Petição Simples' },
   { id: 'peticao', name: 'Petição Inicial' },
   { id: 'contestacao', name: 'Contestação' },
   { id: 'recurso', name: 'Recurso' },

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { FileText, Wand2, Eye, Download, Clock, CheckCircle, AlertCircle, Upload, X } from 'lucide-react';
 import { documentTypes, mockDocuments } from '../data/mockData';
 import PeticaoInicialWizard from './PeticaoInicialWizard';
+import PeticaoSimplesWizard from './PeticaoSimplesWizard';
 import DocumentWizard from './DocumentWizard';
 import PageHeader from './PageHeader';
 
@@ -277,12 +278,12 @@ export default function DocumentGenerator() {
       {/* Seletor de Tipo */}
       <div className="card p-6">
         <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">Selecione o Tipo de Documento</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-4">
           {documentTypes.map((type) => (
             <button
               key={type.id}
               onClick={() => handleTypeChange(type.id)}
-              className={`p-4 rounded-md border-2 transition-all duration-150 ${
+              className={`p-5 rounded-md border-2 transition-all duration-150 ${
                 selectedType === type.id
                   ? 'border-slate-900 dark:border-gray-600 bg-slate-50 dark:bg-gray-700 text-slate-900 dark:text-white'
                   : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500 hover:bg-gray-50 dark:hover:bg-gray-700'
@@ -296,7 +297,9 @@ export default function DocumentGenerator() {
       </div>
 
       {/* Formulário */}
-      {selectedType === 'peticao' ? (
+      {selectedType === 'peticao_simples' ? (
+        <PeticaoSimplesWizard onCancel={handleCancelSelection} />
+      ) : selectedType === 'peticao' ? (
         <PeticaoInicialWizard onCancel={handleCancelSelection} />
       ) : selectedType && ['contestacao', 'recurso', 'contrato', 'procuracao'].includes(selectedType) ? (
         <DocumentWizard documentType={selectedType} onCancel={handleCancelSelection} />
