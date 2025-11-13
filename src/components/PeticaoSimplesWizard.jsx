@@ -434,7 +434,7 @@ export default function PeticaoSimplesWizard({ onCancel }) {
       </div>
 
       <div className="flex justify-between mt-6">
-        <button onClick={onCancel} className="btn-ghost" disabled={isLoadingNextStep}><X className="h-4 w-4 mr-2" />Cancelar</button>
+        <button onClick={onCancel} className="btn-secondary px-6 py-3" disabled={isLoadingNextStep}>Cancelar</button>
         <button onClick={nextStep} className="btn-primary px-6 py-3 flex items-center justify-center" disabled={isLoadingNextStep}>
           {isLoadingNextStep ? (
             <>
