@@ -128,43 +128,59 @@ export default function PeticaoSimplesWizard({ onCancel }) {
     }
   };
 
-  // Busca o último documento gerado na tabela peticao_simples_ia
-  const fetchLatestPeticaoSimples = async () => {
+  const fetchBaselineId = async () => {
     try {
       const { data, error } = await supabase
         .from('peticao_simples_ia')
-        .select('*')
+        .select('id')
+        .order('id', { ascending: false })
+        .limit(1);
+      if (error) {
+        console.error('Erro ao obter baseline ID:', error);
+        return 0;
+      }
+      return data?.[0]?.id || 0;
+    } catch (err) {
+      console.error('Falha ao obter baseline ID:', err);
+      return 0;
+    }
+  };
+
+  const fetchLatestAfterId = async (afterId = 0) => {
+    try {
+      const { data, error } = await supabase
+        .from('peticao_simples_ia')
+        .select('id, documento_gerado')
         .not('documento_gerado', 'is', null)
         .neq('documento_gerado', '')
+        .gt('id', afterId)
         .order('id', { ascending: false })
         .limit(1);
 
       if (error) {
-        console.error('Erro ao buscar peticao_simples_ia:', error);
+        console.error('Erro ao buscar última linha após baseline:', error);
         return null;
       }
       if (!data || data.length === 0) return null;
-      return data[0].documento_gerado || null;
+      return data[0]?.documento_gerado || null;
     } catch (err) {
-      console.error('Falha na consulta ao Supabase (peticao_simples_ia):', err);
+      console.error('Falha na consulta ao Supabase (após baseline):', err);
       return null;
     }
   };
 
-  // Poll simples até 20s, tentando encontrar documento
-  const fetchWithWindow = async (windowMs = 20000, intervalMs = 4000) => {
+  const pollLatestDocument = async (baselineId, windowMs = 10000, intervalMs = 2000) => {
     const end = Date.now() + windowMs;
-    let latest = await fetchLatestPeticaoSimples();
+    let latest = await fetchLatestAfterId(baselineId);
     while (!latest && Date.now() < end) {
       await new Promise((r) => setTimeout(r, intervalMs));
-      latest = await fetchLatestPeticaoSimples();
+      latest = await fetchLatestAfterId(baselineId);
     }
     return latest;
   };
 
   const nextStep = async () => {
     if (currentStep === 0) {
-      // Validação de campos obrigatórios
       const required = [
         'tipoPeticao',
         'processNumber',
@@ -183,14 +199,10 @@ export default function PeticaoSimplesWizard({ onCancel }) {
 
       setIsLoadingNextStep(true);
       try {
-        // Espera exatamente 20 segundos e busca a última linha no Supabase
+        const baselineId = await fetchBaselineId();
         await new Promise((resolve) => setTimeout(resolve, 20000));
-        const supabaseContent = await fetchLatestPeticaoSimples();
-
-        // Se não vier do Supabase, gera localmente como fallback
+        const supabaseContent = await pollLatestDocument(baselineId);
         const finalContent = supabaseContent || generateDocument();
-
-        // Atualiza estado do documento gerado e editor
         setGeneratedDoc({
           id: Date.now(),
           type: 'peticao_simples',
@@ -201,7 +213,6 @@ export default function PeticaoSimplesWizard({ onCancel }) {
         });
         setEditedContent(finalContent);
 
-        // Envio assíncrono com anexos em base64 incluindo conteúdo final
         sendWebhook(finalContent);
       } catch (err) {
         console.error('Erro ao preparar conteúdo da petição simples:', err);
