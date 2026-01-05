@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, User, MapPin, AlertCircle, CheckCircle } from 'lucide-react';
+import { Calendar, Clock, User, MapPin, CheckCircle } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
 
 interface Event {
@@ -72,20 +72,7 @@ const SimpleAgenda: React.FC = () => {
     }
   };
 
-  const getEventTypeLabel = (type: string) => {
-    switch (type) {
-      case 'court':
-        return 'Tribunal';
-      case 'meeting':
-        return 'Reunião';
-      case 'deadline':
-        return 'Prazo';
-      case 'appointment':
-        return 'Compromisso';
-      default:
-        return 'Evento';
-    }
-  };
+  
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {

@@ -13,6 +13,29 @@ export const useContracts = () => {
     fetchContracts();
   }, []);
 
+  useEffect(() => {
+    const channel = supabase
+      .channel('realtime-contratos')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'contratos' }, async () => {
+        await fetchContracts();
+      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'contratos' }, async () => {
+        await fetchContracts();
+      })
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'contratos' }, (payload: unknown) => {
+        const oldObj = (payload as Record<string, unknown>)['old'] as Record<string, unknown> | undefined;
+        const deletedId = oldObj && typeof oldObj['id'] === 'number' ? (oldObj['id'] as number) : undefined;
+        if (deletedId !== undefined) {
+          setContracts(prev => prev.filter(contract => contract.id !== deletedId));
+        }
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
   const fetchContracts = async () => {
     try {
       setLoading(true);
@@ -21,7 +44,8 @@ export const useContracts = () => {
       const { data, error } = await supabase
         .from('contratos')
         .select('*')
-        .order('data_analise', { ascending: false });
+        .order('data_analise', { ascending: false })
+        .limit(50);
 
       if (error) {
         throw error;

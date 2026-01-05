@@ -12,7 +12,7 @@ interface ClientsEvolutionChartProps {
   loading?: boolean;
 }
 
-const CustomTooltip = ({ active, payload, label }: any) => {
+const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?: Array<{ value: number }>; label?: string | number }) => {
   if (active && payload && payload.length) {
     return (
       <div className="bg-white dark:bg-gray-800 p-3 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg">

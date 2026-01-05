@@ -3,7 +3,15 @@ import react from '@vitejs/plugin-react';
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react({
+      babel: {
+        generatorOpts: {
+          compact: true
+        }
+      }
+    })
+  ],
   optimizeDeps: {
     exclude: ['lucide-react'],
   },
@@ -21,6 +29,11 @@ export default defineConfig({
         target: 'https://n8n-n8n.04qisd.easypanel.host',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api\/processos/, '/webhook/juridico/analise-de-processos')
+      },
+      '/api/recurso': {
+        target: 'https://n8n-n8n.04qisd.easypanel.host',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/recurso/, '/webhook/recurso-judicial')
       }
     }
   }

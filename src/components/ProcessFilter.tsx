@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Search, Filter, Calendar, Building, User, Scale, FileText, Folder, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Search, Filter, Calendar, Building, User, Scale, FileText, Folder, X } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import { useApp } from '../contexts/AppContext';
 import PageHeader from './PageHeader';
@@ -66,9 +66,7 @@ interface Process {
 export default function ProcessFilter() {
   const { state, dispatch } = useApp();
   const [searchTerm, setSearchTerm] = useState('');
-  const [isSearching, setIsSearching] = useState(false);
   const [isLoadingProcesses, setIsLoadingProcesses] = useState(true);
-  const [showResults, setShowResults] = useState(false);
   const [processes, setProcesses] = useState<Process[]>([]);
   const [filteredProcesses, setFilteredProcesses] = useState<Process[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
@@ -77,7 +75,7 @@ export default function ProcessFilter() {
   const [selectedProcess, setSelectedProcess] = useState<Process | null>(null);
   const [selectedProcessMovimentacoes, setSelectedProcessMovimentacoes] = useState<Process | null>(null);
   const [showMovimentacoesModal, setShowMovimentacoesModal] = useState(false);
-  const [pendingProcessToOpen, setPendingProcessToOpen] = useState<string | null>(null);
+  
   const [movimentacoes, setMovimentacoes] = useState<Movimentacao[]>([]);
   const [isLoadingMovimentacoes, setIsLoadingMovimentacoes] = useState(false);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
@@ -94,13 +92,67 @@ export default function ProcessFilter() {
     'TRF2'
   ];
 
+  const applyFilters = useCallback(() => {
+    let filtered = processes;
+
+    // Filtro por termo de busca
+    if (searchTerm) {
+      filtered = filtered.filter(process => 
+        (process.numero_cnj && process.numero_cnj.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (process.titulo_polo_ativo && process.titulo_polo_ativo.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (process.titulo_polo_passivo && process.titulo_polo_passivo.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (process.assunto && process.assunto.toLowerCase().includes(searchTerm.toLowerCase()))
+      );
+    }
+
+    // Filtro por tribunal
+    if (filters.tribunal !== 'Todos') {
+      filtered = filtered.filter(process => process.tribunal_sigla === filters.tribunal);
+    }
+
+    // Filtro por data de início
+    if (filters.dateFrom && filters.dateFrom.length === 10) {
+      // Converte DD/MM/AAAA para AAAA-MM-DD
+      const [day, month, year] = filters.dateFrom.split('/');
+      const dateFromISO = `${year}-${month}-${day}`;
+      
+      filtered = filtered.filter(process => {
+        // Usa data_inicio dos detalhes se disponível, senão usa a data padrão
+        const processDate = process.details?.data_inicio || process.data;
+        return processDate && new Date(processDate) >= new Date(dateFromISO);
+      });
+    }
+
+    if (filters.dateTo) {
+      filtered = filtered.filter(process => 
+        process.data && new Date(process.data) <= new Date(filters.dateTo)
+      );
+    }
+
+    // Ordenação por data
+    filtered.sort((a, b) => {
+      const dateA = new Date(a.details?.data_inicio || a.data || '1900-01-01');
+      const dateB = new Date(b.details?.data_inicio || b.data || '1900-01-01');
+      
+      if (filters.sortOrder === 'mais_recentes') {
+        // Mais recentes primeiro (datas mais novas primeiro)
+        return dateB.getTime() - dateA.getTime();
+      } else {
+        // Mais antigos primeiro (datas mais antigas primeiro)
+        return dateA.getTime() - dateB.getTime();
+      }
+    });
+
+    setFilteredProcesses(filtered);
+  }, [searchTerm, filters, processes]);
+
   useEffect(() => {
     fetchProcesses();
   }, []);
 
   useEffect(() => {
     applyFilters();
-  }, [searchTerm, filters, processes]);
+  }, [applyFilters]);
 
   // Verificar se há parâmetros de navegação para abrir processo específico
   useEffect(() => {
@@ -134,7 +186,7 @@ export default function ProcessFilter() {
       // Processar os dados para extrair o assunto e detalhes completos
       const processedData = (data || []).map(process => {
         let assunto = 'Assunto não informado';
-        let details: ProcessDetails = {};
+        const details: ProcessDetails = {};
         
         try {
           const processData = process.data;
@@ -198,6 +250,24 @@ export default function ProcessFilter() {
     setShowResults(false);
   };
 
+  interface MovimentacaoRecord {
+    id: number;
+    numero_cnj: string;
+    data: Record<string, unknown> | null;
+    data_movimentacao: string;
+    created_at: string;
+  }
+
+  type SupabaseResp = {
+    data: MovimentacaoRecord[] | null;
+    error: {
+      message?: string;
+      details?: string;
+      hint?: string;
+      code?: string;
+    } | null;
+  };
+
   const fetchMovimentacoes = async (numeroCnj: string): Promise<Movimentacao[]> => {
     setIsLoadingMovimentacoes(true);
     console.log('🔍 Buscando movimentações para CNJ:', numeroCnj);
@@ -223,7 +293,7 @@ export default function ProcessFilter() {
         .order('id', { ascending: true })
         .limit(5);
       
-      const { data, error } = await Promise.race([queryPromise, timeoutPromise]) as any;
+      const { data, error } = await Promise.race([queryPromise, timeoutPromise]) as SupabaseResp;
 
       console.log('📊 Resposta do Supabase:', { data, error });
 
@@ -367,60 +437,6 @@ export default function ProcessFilter() {
     setMovimentacoes([]);
   };
 
-  const applyFilters = () => {
-    let filtered = processes;
-
-    // Filtro por termo de busca
-    if (searchTerm) {
-      filtered = filtered.filter(process => 
-        (process.numero_cnj && process.numero_cnj.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (process.titulo_polo_ativo && process.titulo_polo_ativo.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (process.titulo_polo_passivo && process.titulo_polo_passivo.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (process.assunto && process.assunto.toLowerCase().includes(searchTerm.toLowerCase()))
-      );
-    }
-
-    // Filtro por tribunal
-    if (filters.tribunal !== 'Todos') {
-      filtered = filtered.filter(process => process.tribunal_sigla === filters.tribunal);
-    }
-
-    // Filtro por data de início
-    if (filters.dateFrom && filters.dateFrom.length === 10) {
-      // Converte DD/MM/AAAA para AAAA-MM-DD
-      const [day, month, year] = filters.dateFrom.split('/');
-      const dateFromISO = `${year}-${month}-${day}`;
-      
-      filtered = filtered.filter(process => {
-        // Usa data_inicio dos detalhes se disponível, senão usa a data padrão
-        const processDate = process.details?.data_inicio || process.data;
-        return processDate && new Date(processDate) >= new Date(dateFromISO);
-      });
-    }
-
-    if (filters.dateTo) {
-      filtered = filtered.filter(process => 
-        process.data && new Date(process.data) <= new Date(filters.dateTo)
-      );
-    }
-
-    // Ordenação por data
-    filtered.sort((a, b) => {
-      const dateA = new Date(a.details?.data_inicio || a.data || '1900-01-01');
-      const dateB = new Date(b.details?.data_inicio || b.data || '1900-01-01');
-      
-      if (filters.sortOrder === 'mais_recentes') {
-        // Mais recentes primeiro (datas mais novas primeiro)
-        return dateB.getTime() - dateA.getTime();
-      } else {
-        // Mais antigos primeiro (datas mais antigas primeiro)
-        return dateA.getTime() - dateB.getTime();
-      }
-    });
-
-    setFilteredProcesses(filtered);
-  };
-
   // Cálculos de paginação
   const totalPages = Math.ceil(filteredProcesses.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
@@ -432,15 +448,7 @@ export default function ProcessFilter() {
     setCurrentPage(1);
   }, [searchTerm, filters]);
 
-  const handleSearch = async () => {
-    setIsSearching(true);
-    
-    // Simular pesquisa (1 segundo)
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    setIsSearching(false);
-    setShowResults(true);
-  };
+  const handleSearch = async () => undefined;
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
@@ -465,10 +473,7 @@ export default function ProcessFilter() {
     }
   };
 
-  const formatDate = (dateString: string) => {
-    if (!dateString) return 'Data não informada';
-    return new Date(dateString).toLocaleDateString('pt-BR');
-  };
+  
 
   return (
     <div className="space-y-6">
@@ -957,7 +962,6 @@ export default function ProcessFilter() {
                   <div className="space-y-6">
                     {movimentacoes.map((movimentacao, index) => {
                       const movimentacaoNumber = index + 1;
-                      const isFirstMovimentacao = index === 0;
                       return (
                       <div key={`mov-${movimentacao.id || index}-${movimentacaoNumber}`} className="bg-white dark:bg-gray-700 border border-gray-100 dark:border-gray-600 rounded-xl p-6 shadow-sm">
                         <div className="flex items-start justify-between mb-4">

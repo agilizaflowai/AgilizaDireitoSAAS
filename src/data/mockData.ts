@@ -116,12 +116,18 @@ export const urgencyLevels = [
 ];
 
 export const documentTypes = [
+  // Existentes
   { id: 'peticao_simples', name: 'Petição Simples' },
   { id: 'peticao', name: 'Petição Inicial' },
   { id: 'contestacao', name: 'Contestação' },
+  { id: 'replica', name: 'Réplica' },
   { id: 'recurso', name: 'Recurso' },
   { id: 'contrato', name: 'Contrato' },
-  { id: 'procuracao', name: 'Procuração' }
+  { id: 'procuracao', name: 'Procuração' },
+  // GERAL (últimos)
+  { id: 'notificacao_extrajudicial', name: 'Notificação Extrajudicial' },
+  { id: 'contrato_honorarios', name: 'Contrato de Honorários' },
+  { id: 'substabelecimento', name: 'Substabelecimento' },
 ];
 
 export const mockDocuments = [
@@ -198,7 +204,7 @@ export const mockDocuments = [
   {
     id: 11,
     type: 'Petição Inicial',
-    title: 'Ação de Divórcio - Carlos Silva',
+    title: 'Divórcio Consensual - Carlos Silva',
     createdAt: '2024-01-15 14:20',
     status: 'Em Revisão'
   },

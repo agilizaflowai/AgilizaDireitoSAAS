@@ -5,6 +5,7 @@ import { supabase } from '../supabaseClient';
 export default function Step1DadosAcao({ data, updateForm, nextStep, onCancel }) {
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
+  const [uploadError, setUploadError] = useState('');
 
   const validate = () => {
     const newErrors = {};
@@ -28,13 +29,14 @@ export default function Step1DadosAcao({ data, updateForm, nextStep, onCancel })
     const files = Array.from(e.target.files);
     const currentFiles = data.uploadedFiles || [];
     
-    if (currentFiles.length + files.length > 3) {
-      alert('Máximo de 3 documentos permitidos');
+    if (currentFiles.length + files.length > 10) {
+      setUploadError('Máximo de 10 documentos permitidos');
       return;
     }
     
     const newFiles = [...currentFiles, ...files];
     updateForm({ uploadedFiles: newFiles });
+    setUploadError('');
   };
 
   const removeFile = (index) => {
@@ -237,7 +239,7 @@ export default function Step1DadosAcao({ data, updateForm, nextStep, onCancel })
             <option value="Ação de Indenização">Ação de Indenização</option>
             <option value="Ação Trabalhista">Ação Trabalhista</option>
             <option value="Ação de Despejo">Ação de Despejo</option>
-            <option value="Ação de Divórcio">Ação de Divórcio</option>
+            <option value="Divórcio Consensual">Divórcio Consensual</option>
             <option value="Ação de Guarda">Ação de Guarda</option>
             <option value="Ação de Usucapião">Ação de Usucapião</option>
             <option value="Ação Declaratória">Ação Declaratória</option>
@@ -287,7 +289,7 @@ export default function Step1DadosAcao({ data, updateForm, nextStep, onCancel })
         {/* Seção de Upload de Documentos */}
         <div>
           <label className="block text-xs uppercase tracking-wide text-slate-900 dark:text-white font-medium mb-2">
-            Documentos (Opcional - Máximo 3 arquivos)
+            Documentos (Opcional - Máximo 10 arquivos)
           </label>
           
           {/* Área de Upload */}
@@ -310,6 +312,9 @@ export default function Step1DadosAcao({ data, updateForm, nextStep, onCancel })
               </p>
             </label>
           </div>
+          {uploadError && (
+            <p className="text-red-700 text-xs mt-2">{uploadError}</p>
+          )}
 
           {/* Lista de Arquivos Enviados */}
           {data.uploadedFiles && data.uploadedFiles.length > 0 && (
@@ -342,10 +347,10 @@ export default function Step1DadosAcao({ data, updateForm, nextStep, onCancel })
         <button type="button" onClick={onCancel} className="btn-secondary px-6 py-3" disabled={isLoading}>
           Cancelar
         </button>
-        <button type="submit" className="btn-primary px-6 py-3" disabled={isLoading}>
+        <button type="submit" className="btn-primary px-6 py-3 flex items-center justify-center" disabled={isLoading}>
           {isLoading ? (
             <>
-              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
               Processando...
             </>
           ) : (

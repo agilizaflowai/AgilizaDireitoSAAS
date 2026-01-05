@@ -14,14 +14,14 @@ interface AppState {
   currentPage: string;
   isAuthenticated: boolean;
   sidebarOpen: boolean;
-  navigationParams?: any;
+  navigationParams: NavigationParams | null;
 }
 
 type AppAction =
   | { type: 'LOGIN'; payload: User }
   | { type: 'LOGOUT' }
   | { type: 'SET_CURRENT_PAGE'; payload: string }
-  | { type: 'NAVIGATE_TO_PAGE'; payload: { page: string; params?: any } }
+  | { type: 'NAVIGATE_TO_PAGE'; payload: { page: string; params?: NavigationParams } }
   | { type: 'TOGGLE_SIDEBAR' }
   | { type: 'SET_SIDEBAR'; payload: boolean };
 
@@ -111,3 +111,5 @@ export function useApp() {
     logout,
   };
 }
+type Primitive = string | number | boolean | null | undefined;
+type NavigationParams = Record<string, Primitive>;

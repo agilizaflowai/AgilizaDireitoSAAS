@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, Plus, ChevronLeft, ChevronRight, Grid3X3, List, Eye, X, Save, Edit3, Trash2, User, MapPin, Bell } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Calendar, Clock, Plus, ChevronLeft, ChevronRight, Grid3X3, List, Eye, X, Save, Trash2, User, MapPin } from 'lucide-react';
 import PageHeader from './PageHeader';
 import ConfirmModal from './ConfirmModal';
 import { useApp } from '../contexts/AppContext';
@@ -44,7 +44,7 @@ export default function DeadlineManagement() {
   const [events, setEvents] = useState<Event[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
-  const [selectedTimeSlot, setSelectedTimeSlot] = useState<string>('');
+  
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [eventToDelete, setEventToDelete] = useState<string | null>(null);
   // Modal de validação (estilo do site, igual ao excluir)
@@ -69,6 +69,18 @@ export default function DeadlineManagement() {
   const [displayDate, setDisplayDate] = useState('');
   const [displayStartTime, setDisplayStartTime] = useState('');
   const [displayEndTime, setDisplayEndTime] = useState('');
+  const [bannerMessage, setBannerMessage] = useState('');
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < 640) {
+        setViewMode('day');
+      }
+    };
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Função para formatação automática de data (DD/MM/YYYY)
   const formatDateInput = (value: string) => {
@@ -151,7 +163,7 @@ export default function DeadlineManagement() {
       console.log(`✅ ${eventsToSave.length} eventos salvos com sucesso`);
     } catch (error) {
       console.error('❌ Erro ao salvar eventos:', error);
-      alert('Erro ao salvar dados. Verifique o espaço disponível no navegador.');
+      setBannerMessage('Erro ao salvar dados. Verifique o espaço disponível no navegador.');
     }
   };
 
@@ -166,45 +178,55 @@ export default function DeadlineManagement() {
       }
     } catch (error) {
       console.error('❌ Erro ao carregar eventos:', error);
-      alert('Erro ao carregar dados salvos. Os dados podem estar corrompidos.');
+      setBannerMessage('Erro ao carregar dados salvos. Os dados podem estar corrompidos.');
     }
     return [];
   };
 
-  // Função para limpar todos os dados salvos
-  const clearAllData = () => {
-    if (confirm('Tem certeza que deseja limpar todos os dados? Esta ação não pode ser desfeita.')) {
-      try {
-        localStorage.removeItem('calendar-events');
-        setEvents([]);
-        console.log('✅ Todos os dados foram limpos');
-        alert('Dados limpos com sucesso!');
-      } catch (error) {
-        console.error('❌ Erro ao limpar dados:', error);
-        alert('Erro ao limpar dados.');
-      }
+  const openModal = useCallback((date?: string, timeSlot?: string, event?: Event) => {
+    if (event) {
+      setEditingEvent(event);
+      setFormData({
+        title: event.title,
+        description: event.description,
+        date: event.date,
+        startTime: event.startTime,
+        endTime: event.endTime,
+        type: event.type,
+        priority: event.priority,
+        client: event.client || '',
+        responsible: event.responsible,
+        location: event.location || '',
+        color: event.color
+      });
+      setDisplayDate(convertDateFromISO(event.date));
+      setDisplayStartTime(event.startTime);
+      setDisplayEndTime(event.endTime);
+    } else {
+      setEditingEvent(null);
+      const eventDate = date || `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`;
+      const startTime = timeSlot || '09:00';
+      const endTimeHour = parseInt(startTime.split(':')[0]) + 1;
+      const endTime = `${endTimeHour.toString().padStart(2, '0')}:00`;
+      setFormData({
+        title: '',
+        description: '',
+        date: eventDate,
+        startTime,
+        endTime,
+        type: 'appointment',
+        priority: 'medium',
+        client: '',
+        responsible: user?.name || 'Usuário',
+        location: '',
+        color: '#3B82F6'
+      });
+      setDisplayDate(convertDateFromISO(eventDate));
+      setDisplayStartTime(startTime);
+      setDisplayEndTime(endTime);
     }
-  };
-
-  // Função para exportar dados (backup)
-  const exportData = () => {
-    try {
-      const dataStr = JSON.stringify(events, null, 2);
-      const dataBlob = new Blob([dataStr], { type: 'application/json' });
-      const url = URL.createObjectURL(dataBlob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `agenda-juridica-backup-${new Date().toISOString().split('T')[0]}.json`;
-      link.click();
-      URL.revokeObjectURL(url);
-      console.log('✅ Backup exportado com sucesso');
-    } catch (error) {
-      console.error('❌ Erro ao exportar dados:', error);
-      alert('Erro ao exportar dados.');
-    }
-  };
-
-
+    setShowModal(true);
+  }, [selectedDate, user]);
 
   // Carregar eventos na inicialização
   useEffect(() => {
@@ -230,7 +252,7 @@ export default function DeadlineManagement() {
         dispatch({ type: 'NAVIGATE_TO_PAGE', payload: { page: 'deadlines', params: null } });
       }
     }
-  }, [navigationParams, events, showModal]);
+  }, [navigationParams, events, showModal, dispatch, openModal]);
 
   const monthNames = [
     'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
@@ -385,58 +407,11 @@ export default function DeadlineManagement() {
     });
   };
 
-  const openModal = (date?: string, timeSlot?: string, event?: Event) => {
-    if (event) {
-      setEditingEvent(event);
-      setFormData({
-        title: event.title,
-        description: event.description,
-        date: event.date,
-        startTime: event.startTime,
-        endTime: event.endTime,
-        type: event.type,
-        priority: event.priority,
-        client: event.client || '',
-        responsible: event.responsible,
-        location: event.location || '',
-        color: event.color
-      });
-      // Inicializar valores formatados para edição
-      setDisplayDate(convertDateFromISO(event.date));
-      setDisplayStartTime(event.startTime);
-      setDisplayEndTime(event.endTime);
-    } else {
-      setEditingEvent(null);
-      const eventDate = date || `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`;
-      const startTime = timeSlot || '09:00';
-      const endTimeHour = parseInt(startTime.split(':')[0]) + 1;
-      const endTime = `${endTimeHour.toString().padStart(2, '0')}:00`;
-      
-      setFormData({
-        title: '',
-        description: '',
-        date: eventDate,
-        startTime,
-        endTime,
-        type: 'appointment',
-        priority: 'medium',
-        client: '',
-        responsible: user?.name || 'Usuário',
-        location: '',
-        color: '#3B82F6'
-      });
-      // Inicializar valores formatados para novo evento
-      setDisplayDate(convertDateFromISO(eventDate));
-      setDisplayStartTime(startTime);
-      setDisplayEndTime(endTime);
-    }
-    setShowModal(true);
-  };
+  
 
   const closeModal = () => {
     setShowModal(false);
     setEditingEvent(null);
-    setSelectedTimeSlot('');
     // Limpar valores formatados
     setDisplayDate('');
     setDisplayStartTime('');
@@ -656,9 +631,11 @@ export default function DeadlineManagement() {
     
     return (
       <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+        <div className="overflow-x-auto">
+          <div className="min-w-[560px] sm:min-w-[640px] md:min-w-[720px]">
         <div className="grid grid-cols-7 border-b border-gray-200 dark:border-gray-700">
           {weekDays.map(day => (
-            <div key={day} className="p-4 text-center text-base font-semibold text-gray-700 dark:text-gray-300 border-r border-gray-200 dark:border-gray-700 last:border-r-0 bg-gray-50 dark:bg-gray-900">
+            <div key={day} className="p-2 sm:p-3 md:p-4 text-center text-xs sm:text-sm md:text-base font-semibold text-gray-700 dark:text-gray-300 border-r border-gray-200 dark:border-gray-700 last:border-r-0 bg-gray-50 dark:bg-gray-900">
               {day}
             </div>
           ))}
@@ -668,7 +645,7 @@ export default function DeadlineManagement() {
           {calendar.map((day, index) => (
             <div
               key={index}
-              className={`min-h-[100px] p-2 border-r border-b border-gray-200 dark:border-gray-700 last:border-r-0 cursor-pointer transition-all duration-200 ${
+              className={`min-h-[80px] sm:min-h-[100px] p-1.5 sm:p-2 border-r border-b border-gray-200 dark:border-gray-700 last:border-r-0 cursor-pointer transition-all duration-200 ${
                 day.isCurrentMonth ? 'bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700' : 'bg-gray-50 dark:bg-gray-900'
               } ${day.isToday ? 'bg-blue-50 dark:bg-blue-900 ring-2 ring-blue-500 ring-inset' : ''} ${
                 day.events.length > 0 && !day.isToday ? 'bg-blue-50 dark:bg-blue-900 border-blue-200 dark:border-blue-700' : ''
@@ -679,10 +656,10 @@ export default function DeadlineManagement() {
                 setViewMode('day');
               }}
             >
-              <div className={`text-sm font-semibold mb-1 flex items-center justify-between ${
+              <div className={`text-xs sm:text-sm font-semibold mb-1 flex items-center justify-between ${
                 day.isCurrentMonth ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500'
               } ${day.isToday ? 'text-blue-600 dark:text-blue-400' : ''}`}>
-                <span className={`${day.isToday ? 'bg-blue-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs' : ''}`}>
+                <span className={`${day.isToday ? 'bg-blue-500 text-white rounded-full w-5 h-5 sm:w-6 sm:h-6 flex items-center justify-center text-[11px] sm:text-xs' : ''}`}>
                   {day.date}
                 </span>
                 {day.events.length > 0 && (
@@ -696,7 +673,7 @@ export default function DeadlineManagement() {
                 {day.events.slice(0, 3).map((event, idx) => (
                   <div
                     key={idx}
-                    className="text-xs px-1.5 py-1 rounded text-white font-medium cursor-pointer truncate"
+                    className="text-[11px] sm:text-xs px-1.5 py-0.5 sm:py-1 rounded text-white font-medium cursor-pointer truncate"
                     style={{ backgroundColor: event.color }}
                     onClick={(e) => {
                       e.stopPropagation();
@@ -718,6 +695,8 @@ export default function DeadlineManagement() {
             </div>
           ))}
         </div>
+          </div>
+        </div>
       </div>
     );
   };
@@ -737,47 +716,42 @@ export default function DeadlineManagement() {
     
     return (
       <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden shadow-sm">
-        {/* Header da semana - responsivo */}
-        <div className="grid border-b border-gray-200 dark:border-gray-700" style={{ gridTemplateColumns: 'minmax(80px, 120px) repeat(7, minmax(0, 1fr))' }}>
-          <div className="p-2 sm:p-3 border-r border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 min-h-[60px] sm:min-h-[80px] flex items-center justify-end">
-            <span className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 font-medium hidden sm:block">Horário</span>
-          </div>
-          {weekDays.map((day, index) => (
-            <div key={index} className={`p-2 sm:p-3 text-center border-r border-gray-200 dark:border-gray-700 last:border-r-0 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors min-h-[60px] sm:min-h-[80px] flex flex-col justify-center ${
-              day.isToday ? 'bg-blue-50 dark:bg-blue-900 ring-1 ring-blue-200 dark:ring-blue-700' : ''
-            }`}
-            onClick={() => {
-              const [year, month, dayNum] = day.fullDate.split('-').map(Number);
-              setSelectedDate(new Date(year, month - 1, dayNum));
-              setViewMode('day');
-            }}>
-              <div className="text-xs text-gray-600 dark:text-gray-400 uppercase tracking-wide mb-1 sm:mb-2 font-medium">
-                <span className="hidden sm:inline">{weekDaysShort[index]}</span>
-                <span className="sm:hidden">{weekDaysShort[index].substring(0, 1)}</span>
-              </div>
-              <div className={`text-base sm:text-lg font-semibold flex items-center justify-center ${
-                day.isToday ? 'text-white' : 'text-gray-900 dark:text-white'
-              }`}>
-                {day.isToday ? (
-                  <div className="w-6 h-6 sm:w-8 sm:h-8 bg-blue-500 dark:bg-blue-600 rounded-full flex items-center justify-center text-white text-xs sm:text-sm font-bold shadow-md">
-                    {day.date}
+        <div className="max-h-[500px] sm:max-h-[600px] overflow-y-auto">
+          <div className="grid sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ gridTemplateColumns: 'minmax(80px, 120px) repeat(7, minmax(0, 1fr))' }}>
+            <div className="p-2 sm:p-3 border-r border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 min-h-[60px] sm:min-h-[80px] flex items-center justify-end">
+              <span className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 font-medium hidden sm:block">Horário</span>
+            </div>
+            {weekDays.map((day, index) => (
+              <div
+                key={index}
+                className={`p-2 sm:p-3 text-center border-r border-gray-200 dark:border-gray-700 last:border-r-0 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors min-h-[60px] sm:min-h-[80px] flex flex-col justify-center ${day.isToday ? 'bg-blue-50 dark:bg-blue-900 ring-1 ring-blue-200 dark:ring-blue-700' : ''}`}
+                onClick={() => {
+                  const [year, month, dayNum] = day.fullDate.split('-').map(Number);
+                  setSelectedDate(new Date(year, month - 1, dayNum));
+                  setViewMode('day');
+                }}
+              >
+                <div className="text-xs text-gray-600 dark:text-gray-400 uppercase tracking-wide mb-1 sm:mb-2 font-medium">
+                  <span className="hidden sm:inline">{weekDaysShort[index]}</span>
+                  <span className="sm:hidden">{weekDaysShort[index].substring(0, 1)}</span>
+                </div>
+                <div className={`text-base sm:text-lg font-semibold flex items-center justify-center ${day.isToday ? 'text-white' : 'text-gray-900 dark:text-white'}`}>
+                  {day.isToday ? (
+                    <div className="w-6 h-6 sm:w-8 sm:h-8 bg-blue-500 dark:bg-blue-600 rounded-full flex items-center justify-center text-white text-xs sm:text-sm font-bold shadow-md">
+                      {day.date}
+                    </div>
+                  ) : (
+                    <span>{day.date}</span>
+                  )}
+                </div>
+                {day.events.length > 0 && (
+                  <div className="mt-1 flex justify-center">
+                    <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-blue-500 dark:bg-blue-400 rounded-full"></div>
                   </div>
-                ) : (
-                  <span>{day.date}</span>
                 )}
               </div>
-              {/* Indicador de eventos */}
-              {day.events.length > 0 && (
-                <div className="mt-1 flex justify-center">
-                  <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-blue-500 dark:bg-blue-400 rounded-full"></div>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-        
-        {/* Área dos slots de tempo - responsiva */}
-        <div className="max-h-[500px] sm:max-h-[600px] overflow-y-auto">
+            ))}
+          </div>
           {timeSlots.map((slot, slotIndex) => (
             <div key={slotIndex} className="grid border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors" style={{ gridTemplateColumns: 'minmax(80px, 120px) repeat(7, minmax(0, 1fr))' }}>
               <div className="p-2 sm:p-3 text-xs sm:text-sm text-gray-500 dark:text-gray-400 border-r border-gray-200 dark:border-gray-700 text-right bg-gray-50 dark:bg-gray-900 flex items-center justify-end min-h-[50px] sm:min-h-[60px] font-medium">
@@ -789,13 +763,8 @@ export default function DeadlineManagement() {
                   const eventStartHour = parseInt(event.startTime.split(':')[0]);
                   const eventEndHour = parseInt(event.endTime.split(':')[0]);
                   const eventEndMinute = parseInt(event.endTime.split(':')[1]);
-                  
-                  // Inclui eventos que começam neste slot ou que se estendem através dele
-                  return eventStartHour === slot.hour || 
-                         (eventStartHour < slot.hour && 
-                          (eventEndHour > slot.hour || (eventEndHour === slot.hour && eventEndMinute > 0)));
+                  return eventStartHour === slot.hour || (eventStartHour < slot.hour && (eventEndHour > slot.hour || (eventEndHour === slot.hour && eventEndMinute > 0)));
                 });
-                
                 return (
                   <div
                     key={dayIndex}
@@ -874,7 +843,6 @@ export default function DeadlineManagement() {
               <div className="flex-1 relative">
                 {slot.events.map((event, eventIndex) => {
                   const eventStartHour = parseInt(event.startTime.split(':')[0]);
-                  const eventStartMinute = parseInt(event.startTime.split(':')[1]);
                   const duration = calculateEventDuration(event.startTime, event.endTime);
                   const position = calculateEventPosition(event.startTime, slot.hour);
                   
@@ -1025,6 +993,7 @@ export default function DeadlineManagement() {
         icon={Calendar}
         title="Agenda Jurídica"
         subtitle="Gerencie compromissos e prazos com visualização profissional"
+        childrenPlacement="below"
       >
         <button
           onClick={() => openModal()}
@@ -1035,10 +1004,14 @@ export default function DeadlineManagement() {
         </button>
       </PageHeader>
 
+      {bannerMessage && (
+        <div className="card p-4 text-red-700 text-xs">{bannerMessage}</div>
+      )}
+
       {/* Navigation and View Controls */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-3 sm:p-4">
+        <div className="flex flex-wrap gap-3 sm:gap-4 items-start sm:items-center justify-between">
+          <div className="flex items-center flex-wrap gap-2 sm:gap-4">
             <button
               onClick={() => navigateDate('prev')}
               className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors dark:text-white"
@@ -1046,7 +1019,7 @@ export default function DeadlineManagement() {
               <ChevronLeft className="h-5 w-5" />
             </button>
             
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white min-w-[300px]">
+            <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white min-w-0 truncate">
               {getDateRangeText()}
             </h2>
             
@@ -1063,12 +1036,22 @@ export default function DeadlineManagement() {
             >
               Hoje
             </button>
+
+            <button
+              onClick={() => setViewMode('day')}
+              className={`flex sm:hidden items-center px-3 py-2 rounded-lg text-sm transition-colors ${
+                viewMode === 'day' ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-200' : 'hover:bg-gray-100 dark:hover:bg-gray-700 dark:text-white'
+              }`}
+            >
+              <Eye className="h-4 w-4 mr-2" />
+              Dia
+            </button>
           </div>
           
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center flex-wrap gap-2">
             <button
               onClick={() => setViewMode('month')}
-              className={`flex items-center px-3 py-2 rounded-lg text-sm transition-colors ${
+              className={`hidden sm:flex items-center px-3 py-2 rounded-lg text-sm transition-colors ${
                 viewMode === 'month' ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-200' : 'hover:bg-gray-100 dark:hover:bg-gray-700 dark:text-white'
               }`}
             >
@@ -1077,7 +1060,7 @@ export default function DeadlineManagement() {
             </button>
             <button
               onClick={() => setViewMode('week')}
-              className={`flex items-center px-3 py-2 rounded-lg text-sm transition-colors ${
+              className={`hidden sm:flex items-center px-3 py-2 rounded-lg text-sm transition-colors ${
                 viewMode === 'week' ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-200' : 'hover:bg-gray-100 dark:hover:bg-gray-700 dark:text-white'
               }`}
             >
@@ -1086,7 +1069,7 @@ export default function DeadlineManagement() {
             </button>
             <button
               onClick={() => setViewMode('day')}
-              className={`flex items-center px-3 py-2 rounded-lg text-sm transition-colors ${
+              className={`hidden sm:flex items-center px-3 py-2 rounded-lg text-sm transition-colors ${
                 viewMode === 'day' ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-200' : 'hover:bg-gray-100 dark:hover:bg-gray-700 dark:text-white'
               }`}
             >
@@ -1098,7 +1081,7 @@ export default function DeadlineManagement() {
       </div>
 
       {/* Calendar Views */}
-      <div className="min-h-[600px]">
+      <div className="min-h-[480px] sm:min-h-[600px]">
         {viewMode === 'month' && renderMonthView()}
         {viewMode === 'week' && renderWeekView()}
         {viewMode === 'day' && renderDayView()}
@@ -1352,7 +1335,7 @@ export default function DeadlineManagement() {
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Tipo</label>
                     <select
                       value={formData.type}
-                      onChange={(e) => setFormData(prev => ({ ...prev, type: e.target.value as any }))}
+                      onChange={(e) => setFormData(prev => ({ ...prev, type: e.target.value as Event['type'] }))}
                       className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                     >
                       <option value="appointment">Compromisso</option>
@@ -1365,7 +1348,7 @@ export default function DeadlineManagement() {
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Prioridade</label>
                     <select
                       value={formData.priority}
-                      onChange={(e) => setFormData(prev => ({ ...prev, priority: e.target.value as any }))}
+                      onChange={(e) => setFormData(prev => ({ ...prev, priority: e.target.value as Event['priority'] }))}
                       className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                     >
                       <option value="low">Baixa</option>
@@ -1473,7 +1456,7 @@ export default function DeadlineManagement() {
       {/* Modal de validação para avisos do site (sem alerta nativo) */}
       <ConfirmModal
         isOpen={showValidationModal}
-        onConfirm={() => {}}
+        onConfirm={() => undefined}
         onClose={() => setShowValidationModal(false)}
         title={validationTitle}
         message={validationMessage}

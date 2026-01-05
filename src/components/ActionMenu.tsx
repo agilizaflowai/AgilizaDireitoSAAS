@@ -1,10 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { MoreVertical, Edit, Trash2, Eye, Download, Share } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 
 interface ActionMenuProps {
   items?: Array<{
     label: string;
-    icon: React.ComponentType<any>;
+    icon: LucideIcon;
     onClick: () => void;
     variant?: 'default' | 'danger';
   }>;

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../supabaseClient';
 import type { FiltroProcesso } from '../types/database';
 
@@ -130,13 +130,7 @@ export const useFiltroProcesso = (id: number) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (id) {
-      fetchProcesso();
-    }
-  }, [id]);
-
-  const fetchProcesso = async () => {
+  const fetchProcesso = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -151,7 +145,6 @@ export const useFiltroProcesso = (id: number) => {
         throw error;
       }
 
-      // Parse dos campos JSON que vêm como strings do banco
       const parsedData = {
         ...data,
         partes: typeof data.partes === 'string' 
@@ -169,7 +162,13 @@ export const useFiltroProcesso = (id: number) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
+
+  useEffect(() => {
+    if (id) {
+      fetchProcesso();
+    }
+  }, [id, fetchProcesso]);
 
   return {
     processo,

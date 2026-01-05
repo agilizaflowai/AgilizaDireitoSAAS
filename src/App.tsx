@@ -1,27 +1,63 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { AppProvider, useApp } from './contexts/AppContext';
 import { ThemeProvider } from './contexts/ThemeProvider';
 import Login from './components/Login';
 import Layout from './components/Layout';
-import Dashboard from './components/Dashboard';
-import ClientFilter from './components/ClientFilter';
-import LeadFilter from './components/LeadFilter';
-import ProcessFilter from './components/ProcessFilter';
-import ProcessResearch from './components/ProcessResearch';
-import DocumentGenerator from './components/DocumentGenerator';
-import ContractAnalysis from './components/ContractAnalysis';
-import CPFValidator from './components/CPFValidator';
-import FeeCalculator from './components/FeeCalculator';
-import DeadlineManagement from './components/DeadlineManagement';
-import AISupport from './components/AISupport';
 import { supabase } from './supabaseClient';
 
 import TourModal from './components/TourModal';
+
+const Dashboard = React.lazy(() => import('./components/Dashboard'));
+const ClientFilter = React.lazy(() => import('./components/ClientFilter'));
+const LeadFilter = React.lazy(() => import('./components/LeadFilter'));
+const ProcessFilter = React.lazy(() => import('./components/ProcessFilter'));
+const ProcessResearch = React.lazy(() => import('./components/ProcessResearch'));
+const DocumentGenerator = React.lazy(() => import('./components/DocumentGenerator'));
+const ContractAnalysis = React.lazy(() => import('./components/ContractAnalysis'));
+const CPFValidator = React.lazy(() => import('./components/CPFValidator'));
+const FeeCalculator = React.lazy(() => import('./components/FeeCalculator'));
+const DeadlineManagement = React.lazy(() => import('./components/DeadlineManagement'));
+const AISupport = React.lazy(() => import('./components/AISupport'));
 
 function AppContent() {
   const { isAuthenticated, currentPage, dispatch } = useApp();
   const [showTour, setShowTour] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
+  const pageToPath = (p: string) => {
+    switch (p) {
+      case 'dashboard': return '/dashboard';
+      case 'clients': return '/clientes';
+      case 'leads': return '/leads';
+      case 'process-filter':
+      case 'processes': return '/filtro-processos';
+      case 'process-research': return '/pesquisa-processos';
+      case 'documents': return '/documentos';
+      case 'contracts': return '/contratos';
+      case 'cpf-validator': return '/cpf';
+      case 'fee-calculator': return '/honorarios';
+      case 'deadlines': return '/agenda';
+      case 'support': return '/suporte';
+      default: return '/dashboard';
+    }
+  };
+  const pathToPage = (path: string) => {
+    const clean = (path || '/').trim().toLowerCase();
+    switch (clean) {
+      case '/dashboard': return 'dashboard';
+      case '/clientes': return 'clients';
+      case '/leads': return 'leads';
+      case '/filtro-processos': return 'process-filter';
+      case '/pesquisa-processos': return 'process-research';
+      case '/documentos': return 'documents';
+      case '/contratos': return 'contracts';
+      case '/cpf': return 'cpf-validator';
+      case '/honorarios': return 'fee-calculator';
+      case '/agenda': return 'deadlines';
+      case '/suporte': return 'support';
+      case '/': return 'dashboard';
+      default: return undefined;
+    }
+  };
 
   // Restaurar sessão e última página ao carregar
   useEffect(() => {
@@ -38,7 +74,7 @@ function AppContent() {
             name: session.user.user_metadata?.name || 'Usuário',
             email: session.user.email || '',
             avatar: session.user.user_metadata?.avatar_url || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80'
-          } as any;
+          };
 
           if (isMounted) {
             dispatch({ type: 'LOGIN', payload: baseUser });
@@ -57,18 +93,25 @@ function AppContent() {
                   name: data.nome || baseUser.name,
                   oab: data.oab,
                   uf: data.uf,
-                } as any;
+                };
                 dispatch({ type: 'LOGIN', payload: enrichedUser });
-                try { localStorage.setItem('agiliza-user', JSON.stringify(enrichedUser)); } catch {}
+                try { localStorage.setItem('agiliza-user', JSON.stringify(enrichedUser)); } catch (e) { console.warn('Falha ao salvar usuário no localStorage', e); }
               }
             })
             .catch((e) => console.warn('Falha ao enriquecer dados do advogado:', e));
         }
 
-        // Restaurar última página navegada
-        const storedPage = localStorage.getItem('agiliza-last-page');
-        if (storedPage) {
-          dispatch({ type: 'SET_CURRENT_PAGE', payload: storedPage });
+        const initialPathPage = pathToPage(window.location.pathname);
+        if (initialPathPage) {
+          dispatch({ type: 'SET_CURRENT_PAGE', payload: initialPathPage });
+        } else {
+          const storedPage = localStorage.getItem('agiliza-last-page');
+          if (storedPage) {
+            dispatch({ type: 'SET_CURRENT_PAGE', payload: storedPage });
+          } else {
+            dispatch({ type: 'SET_CURRENT_PAGE', payload: 'dashboard' });
+            history.replaceState({ page: 'dashboard' }, '', '/dashboard');
+          }
         }
       } catch (e) {
         console.error('Falha ao hidratar sessão/página:', e);
@@ -88,7 +131,7 @@ function AppContent() {
               name: session.user.user_metadata?.name || 'Usuário',
               email: session.user.email || '',
               avatar: session.user.user_metadata?.avatar_url || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80'
-            } as any;
+            };
             dispatch({ type: 'LOGIN', payload: baseUser });
 
             supabase
@@ -103,9 +146,9 @@ function AppContent() {
                     name: data.nome || baseUser.name,
                     oab: data.oab,
                     uf: data.uf,
-                  } as any;
+                  };
                   dispatch({ type: 'LOGIN', payload: enrichedUser });
-                  try { localStorage.setItem('agiliza-user', JSON.stringify(enrichedUser)); } catch {}
+                  try { localStorage.setItem('agiliza-user', JSON.stringify(enrichedUser)); } catch (e) { console.warn('Falha ao salvar usuário no localStorage', e); }
                 }
               })
               .catch((e) => console.warn('Falha ao enriquecer dados do advogado:', e));
@@ -124,10 +167,29 @@ function AppContent() {
     };
   }, [dispatch]);
 
+  useEffect(() => {
+    const handler = () => {
+      const p = pathToPage(window.location.pathname);
+      if (p) {
+        dispatch({ type: 'SET_CURRENT_PAGE', payload: p });
+      }
+    };
+    window.addEventListener('popstate', handler);
+    return () => window.removeEventListener('popstate', handler);
+  }, [dispatch]);
+
+  useEffect(() => {
+    if (!authChecked || !currentPage) return;
+    const desired = pageToPath(currentPage);
+    if (window.location.pathname !== desired) {
+      history.pushState({ page: currentPage }, '', desired);
+    }
+  }, [currentPage, authChecked]);
+
   // Persistir página atual
   useEffect(() => {
     if (currentPage) {
-      try { localStorage.setItem('agiliza-last-page', currentPage); } catch {}
+      try { localStorage.setItem('agiliza-last-page', currentPage); } catch (e) { console.warn('Falha ao salvar página no localStorage', e); }
     }
   }, [currentPage]);
 
@@ -191,9 +253,11 @@ function AppContent() {
   return (
     <div className="min-h-screen bg-gray-50">
       <Layout>
-        <div className="animate-fade-in">
-          {renderCurrentPage()}
-        </div>
+        <Suspense fallback={<div className="min-h-[200px] flex items-center justify-center">Carregando…</div>}>
+          <div className="animate-fade-in">
+            {renderCurrentPage()}
+          </div>
+        </Suspense>
       </Layout>
       <TourModal isOpen={showTour} onClose={handleCloseTour} />
     </div>

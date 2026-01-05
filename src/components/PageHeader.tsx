@@ -6,9 +6,29 @@ interface PageHeaderProps {
   title: string;
   subtitle: string;
   children?: React.ReactNode;
+  childrenPlacement?: 'right' | 'below';
 }
 
-export default function PageHeader({ icon: Icon, title, subtitle, children }: PageHeaderProps) {
+export default function PageHeader({ icon: Icon, title, subtitle, children, childrenPlacement = 'right' }: PageHeaderProps) {
+  if (childrenPlacement === 'below') {
+    return (
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+        <div className="flex items-start">
+          <Icon className="h-8 w-8 text-slate-900 dark:text-white mr-4" strokeWidth={1.5} />
+          <div className="flex-1">
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{title}</h1>
+            <p className="text-gray-600 dark:text-gray-300 mt-1">{subtitle}</p>
+            {children && (
+              <div className="mt-4">
+                {children}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
       <div className="flex items-center justify-between">

@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Phone, Calendar, Users, FileText, Plus, Edit2, Save, X, Trash2, MessageCircle, User } from 'lucide-react';
+import { Search, Phone, Calendar, Users, FileText, Edit2, Save, X, Trash2, User } from 'lucide-react';
 import { supabase } from '../supabaseClient';
-import { useApp } from '../contexts/AppContext';
 import EmptyState from './EmptyState';
 import SwipeableListItem from './SwipeableListItem';
 import ActionMenu from './ActionMenu';
@@ -25,7 +24,6 @@ interface DisplayClient {
 }
 
 export default function ClientFilter() {
-  const { dispatch } = useApp();
   const [clients, setClients] = useState<DisplayClient[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -77,7 +75,8 @@ export default function ClientFilter() {
       }
 
       // Transformar dados para o formato de exibição
-      const displayClients: DisplayClient[] = data.map((client: any) => ({
+      type ClientRow = Client & { clientes_processos?: Array<{ numero_cnj: string | null }> };
+      const displayClients: DisplayClient[] = (data as ClientRow[]).map((client) => ({
         id: client.cpfcnpj,
         name: client.nome || 'Nome não informado',
         cpfcnpj: client.cpfcnpj,

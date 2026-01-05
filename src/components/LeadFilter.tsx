@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Phone, Calendar, Tag, FileText, Scale, TrendingUp, MessageCircle, UserPlus, Trash2 } from 'lucide-react';
+import { Search, Phone, Calendar, Tag, FileText, Scale, TrendingUp, UserPlus, Trash2 } from 'lucide-react';
 import EmptyState from './EmptyState';
 import SwipeableListItem from './SwipeableListItem';
 import ActionMenu from './ActionMenu';
@@ -56,6 +56,7 @@ export default function LeadFilter() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [leadToDelete, setLeadToDelete] = useState<Lead | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [errorBanner, setErrorBanner] = useState('');
 
   const openDeleteModal = (lead: Lead) => {
     setLeadToDelete(lead);
@@ -77,13 +78,13 @@ export default function LeadFilter() {
         .eq('whatsapp', leadToDelete.whatsapp);
       if (error) {
         console.error('Erro ao excluir lead:', error);
-        alert('Erro ao excluir lead. Tente novamente.');
+        setErrorBanner('Erro ao excluir lead. Tente novamente.');
         return;
       }
       setLeads((prev) => prev.filter((l) => l.whatsapp !== leadToDelete.whatsapp));
     } catch (err) {
       console.error('Falha na conexão com Supabase:', err);
-      alert('Falha na conexão com Supabase.');
+      setErrorBanner('Falha na conexão com Supabase.');
     } finally {
       setIsDeleting(false);
     }
@@ -156,6 +157,10 @@ export default function LeadFilter() {
         subtitle="Lista de leads do sistema"
       />
 
+      {errorBanner && (
+        <div className="card p-4 text-red-700 text-xs">{errorBanner}</div>
+      )}
+
       {/* Filtros e Busca */}
       <div className="card p-6">
         <div className="flex flex-col sm:flex-row gap-4">
@@ -214,8 +219,8 @@ export default function LeadFilter() {
         ) : (
           <>
             <div className="divide-y divide-gray-200">
-              {currentLeads.map((lead, index) => (
-              <SwipeableListItem
+              {currentLeads.map((lead) => (
+                <SwipeableListItem
                 key={lead.whatsapp}
                 onEdit={() => console.log('Edit lead', lead.whatsapp)}
                 onDelete={() => openDeleteModal(lead)}

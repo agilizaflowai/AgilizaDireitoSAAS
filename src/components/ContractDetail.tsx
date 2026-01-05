@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowLeft, BarChart3, Download, AlertTriangle, TrendingUp, CheckCircle, X, Loader2 } from "lucide-react";
+import { ArrowLeft, BarChart3, AlertTriangle, TrendingUp, Loader2 } from "lucide-react";
 import { useContract } from "../hooks/useContracts";
 import { useApp } from '../contexts/AppContext';
 

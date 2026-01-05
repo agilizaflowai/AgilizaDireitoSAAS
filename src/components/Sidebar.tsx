@@ -10,13 +10,13 @@ import {
   Clock, 
   MessageCircle, 
   Menu,
-  Scale,
   X,
   Calculator,
   Shield
 } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
 import Tooltip from './Tooltip';
+import logoUrl from '../../Logo.svg';
 
 const menuItems = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, tooltip: 'Visão geral do sistema' },
@@ -58,8 +58,7 @@ export default function Sidebar() {
         </button>
         
         <div className="flex items-center">
-          <Scale className="h-6 w-6 text-slate-900 mr-2" strokeWidth={1.5} />
-          <h1 className="text-lg font-semibold text-slate-900 dark:text-white tracking-tight">AgilizaDireito</h1>
+          <img src={logoUrl} alt="AgilizaDireito" className="h-48 w-auto" />
         </div>
         
         <div className="w-11"></div> {/* Spacer for centering */}
@@ -77,8 +76,7 @@ export default function Sidebar() {
         <div className="p-4">
           <div className="flex items-center justify-between mb-8">
             <div className="flex items-center">
-              <Scale className="h-6 w-6 text-slate-900 dark:text-white mr-3" strokeWidth={1.5} />
-              <h1 className="text-lg font-semibold text-slate-900 dark:text-white tracking-tight">AgilizaDireito</h1>
+              <img src={logoUrl} alt="AgilizaDireito" className="h-64 w-auto" />
             </div>
             <button
               onClick={() => setIsMobileOpen(false)}
@@ -124,26 +122,25 @@ export default function Sidebar() {
     <div className={`hidden md:block fixed left-0 top-0 h-full enterprise-sidebar transition-all duration-200 z-50 ${
       sidebarOpen ? 'w-60' : 'w-20'
     }`}>
-      <div className="p-4 flex flex-col h-full">
+      <div className="px-3 py-2 flex flex-col h-full">
         {/* Logo e botão de expandir/recolher na mesma linha (expandido) ou empilhados (minimizado) */}
         {sidebarOpen ? (
-          <div className="flex items-center justify-between mb-8 mt-4">
+          <div className="flex items-center justify-start gap-2 mb-2 mt-1">
             <div className="flex items-center">
-              <Scale className="h-9 w-9 text-slate-900 dark:text-white mr-3" strokeWidth={1.5} />
-              <h1 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">AgilizaDireito</h1>
+              <img src={logoUrl} alt="AgilizaDireito" className="h-40 w-auto" />
             </div>
             <Tooltip content={sidebarOpen ? 'Recolher menu' : 'Expandir menu'}>
               <button
                 onClick={() => dispatch({ type: 'TOGGLE_SIDEBAR' })}
-                className="btn-icon ml-2"
+                className="btn-icon"
               >
                 <Menu className="h-5 w-5" strokeWidth={1.5} />
               </button>
             </Tooltip>
           </div>
         ) : (
-          <div className="flex flex-col items-center mb-8 gap-2 mt-6">
-            <Scale className="h-8 w-8 text-slate-900 dark:text-white" strokeWidth={1.5} />
+          <div className="flex flex-col items-center mb-2 gap-1 mt-2">
+            <img src={logoUrl} alt="AgilizaDireito" className="h-24 w-auto" />
             <Tooltip content="Expandir menu">
               <button
                 onClick={() => dispatch({ type: 'TOGGLE_SIDEBAR' })}

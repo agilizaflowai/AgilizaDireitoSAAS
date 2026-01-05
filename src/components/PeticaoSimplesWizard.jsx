@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType } from 'docx';
 import { saveAs } from 'file-saver';
-import { ArrowLeft, ArrowRight, Download, Eye, FileText, X, Upload, Loader2, Pencil } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Download, Eye, FileText, X, Upload, Pencil, Wand2 } from 'lucide-react';
 import StepIndicator from './StepIndicator';
 import { supabase } from '../supabaseClient';
 
@@ -14,6 +14,9 @@ export default function PeticaoSimplesWizard({ onCancel }) {
   const [editedContent, setEditedContent] = useState('');
   const [generatedDoc, setGeneratedDoc] = useState(null);
   const [isLoadingNextStep, setIsLoadingNextStep] = useState(false);
+  const [errors, setErrors] = useState({});
+  const [uploadError, setUploadError] = useState('');
+  const [docxError, setDocxError] = useState('');
 
   const initialFormData = {
     tipoPeticao: '', // Tipo de Petição Simples
@@ -37,6 +40,7 @@ export default function PeticaoSimplesWizard({ onCancel }) {
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+    setErrors(prev => ({ ...prev, [name]: '' }));
   };
 
   // Upload de documentos semelhante ao campo da Petição Inicial
@@ -44,8 +48,8 @@ export default function PeticaoSimplesWizard({ onCancel }) {
     const files = Array.from(e.target.files || []);
     const currentFiles = formData.attachments || [];
 
-    if (currentFiles.length + files.length > 3) {
-      alert('Máximo de 3 documentos permitidos');
+    if (currentFiles.length + files.length > 10) {
+      setUploadError('Máximo de 10 documentos permitidos');
       return;
     }
 
@@ -60,6 +64,7 @@ export default function PeticaoSimplesWizard({ onCancel }) {
       ...prev,
       attachments: [...currentFiles, ...validNewFiles]
     }));
+    setUploadError('');
   };
 
   const removeFile = (index) => {
@@ -193,7 +198,12 @@ export default function PeticaoSimplesWizard({ onCancel }) {
       ];
       const missing = required.filter((k) => !formData[k] || formData[k].trim() === '');
       if (missing.length) {
-        alert('Preencha todos os campos obrigatórios antes de avançar.');
+        const fieldErrors = {};
+        missing.forEach((k) => { fieldErrors[k] = 'Campo obrigatório'; });
+        setErrors(fieldErrors);
+        const first = missing[0];
+        const el = document.querySelector(`[name="${first}"]`);
+        if (el && typeof el.focus === 'function') el.focus();
         return;
       }
 
@@ -320,13 +330,14 @@ export default function PeticaoSimplesWizard({ onCancel }) {
 
   const downloadDocx = async () => {
     try {
+      setDocxError('');
       const doc = generateDocxDocument();
       const blob = await Packer.toBlob(doc);
       const fileName = `peticao_simples_${(formData.tipoPeticao || 'documento').replace(/\s+/g, '_')}_${new Date().toISOString().slice(0,10)}.docx`;
       saveAs(blob, fileName);
     } catch (err) {
       console.error('Erro ao gerar documento DOCX:', err);
-      alert('Erro ao gerar documento DOCX. Verifique os dados e tente novamente.');
+      setDocxError('Erro ao gerar documento DOCX. Verifique os dados e tente novamente.');
     }
   };
 
@@ -345,58 +356,66 @@ export default function PeticaoSimplesWizard({ onCancel }) {
       <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-6">Dados da Petição Simples</h2>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
-          <label className="block text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 font-medium mb-2">Tipo de Petição Simples *</label>
+          <label className="block text-xs uppercase tracking-wide text-slate-900 dark:text-white font-medium mb-2">Tipo de Petição Simples *</label>
           <input type="text" name="tipoPeticao" value={formData.tipoPeticao} onChange={handleInputChange} className="input-primary" placeholder="Ex: Juntada de Documentos" />
+          {errors.tipoPeticao && <p className="text-red-700 text-xs mt-1">{errors.tipoPeticao}</p>}
         </div>
         <div>
-          <label className="block text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 font-medium mb-2">Número do Processo *</label>
+          <label className="block text-xs uppercase tracking-wide text-slate-900 dark:text-white font-medium mb-2">Número do Processo *</label>
           <input type="text" name="processNumber" value={formData.processNumber} onChange={handleInputChange} className="input-primary" placeholder="0000000-00.0000.0.00.0000" />
+          {errors.processNumber && <p className="text-red-700 text-xs mt-1">{errors.processNumber}</p>}
         </div>
         <div>
-          <label className="block text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 font-medium mb-2">Vara/Juízo *</label>
+          <label className="block text-xs uppercase tracking-wide text-slate-900 dark:text-white font-medium mb-2">Vara/Juízo *</label>
           <input type="text" name="courtName" value={formData.courtName} onChange={handleInputChange} className="input-primary" placeholder="Ex: 2ª Vara do Trabalho de Petrópolis/RJ" />
+          {errors.courtName && <p className="text-red-700 text-xs mt-1">{errors.courtName}</p>}
         </div>
         <div>
-          <label className="block text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 font-medium mb-2">Nome da Parte Peticionante *</label>
+          <label className="block text-xs uppercase tracking-wide text-slate-900 dark:text-white font-medium mb-2">Nome da Parte Peticionante *</label>
           <input type="text" name="petitionerName" value={formData.petitionerName} onChange={handleInputChange} className="input-primary" placeholder="Ex: João da Silva (Autor/Reclamante)" />
+          {errors.petitionerName && <p className="text-red-700 text-xs mt-1">{errors.petitionerName}</p>}
         </div>
         
         <div className="md:col-span-2">
-          <label className="block text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 font-medium mb-2">Motivo/Fundamento *</label>
+          <label className="block text-xs uppercase tracking-wide text-slate-900 dark:text-white font-medium mb-2">Motivo/Fundamento *</label>
           <textarea name="motiveFundament" value={formData.motiveFundament} onChange={handleInputChange} className="input-primary" rows={4} placeholder="Descreva de maneira clara e objetiva o fundamento do pedido" />
+          {errors.motiveFundament && <p className="text-red-700 text-xs mt-1">{errors.motiveFundament}</p>}
         </div>
         <div className="md:col-span-2">
-          <label className="block text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 font-medium mb-2">Pedido Específico *</label>
+          <label className="block text-xs uppercase tracking-wide text-slate-900 dark:text-white font-medium mb-2">Pedido Específico *</label>
           <textarea name="specificRequest" value={formData.specificRequest} onChange={handleInputChange} className="input-primary" rows={4} placeholder="O que se requer. Separe múltiplos pedidos por linha ou ponto e vírgula" />
+          {errors.specificRequest && <p className="text-red-700 text-xs mt-1">{errors.specificRequest}</p>}
         </div>
         <div>
-          <label className="block text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 font-medium mb-2">Nome do Advogado *</label>
+          <label className="block text-xs uppercase tracking-wide text-slate-900 dark:text-white font-medium mb-2">Nome do Advogado *</label>
           <input type="text" name="lawyerName" value={formData.lawyerName} onChange={handleInputChange} className="input-primary" placeholder="Nome completo do advogado" />
+          {errors.lawyerName && <p className="text-red-700 text-xs mt-1">{errors.lawyerName}</p>}
         </div>
         <div>
-          <label className="block text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 font-medium mb-2">OAB *</label>
+          <label className="block text-xs uppercase tracking-wide text-slate-900 dark:text-white font-medium mb-2">OAB *</label>
           <input type="text" name="lawyerOab" value={formData.lawyerOab} onChange={handleInputChange} className="input-primary" placeholder="Ex: OAB/UF 123456" />
+          {errors.lawyerOab && <p className="text-red-700 text-xs mt-1">{errors.lawyerOab}</p>}
         </div>
 
         {/* Opcionais */}
         <div>
-          <label className="block text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 font-medium mb-2">Nome da Parte Adversa (opcional)</label>
+          <label className="block text-xs uppercase tracking-wide text-slate-900 dark:text-white font-medium mb-2">Nome da Parte Adversa (opcional)</label>
           <input type="text" name="opposingPartyName" value={formData.opposingPartyName} onChange={handleInputChange} className="input-primary" placeholder="Ex: Empresa XYZ Ltda." />
         </div>
         <div>
-          <label className="block text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 font-medium mb-2">Prazo/Urgência (opcional)</label>
+          <label className="block text-xs uppercase tracking-wide text-slate-900 dark:text-white font-medium mb-2">Prazo/Urgência (opcional)</label>
           <input type="text" name="urgency" value={formData.urgency} onChange={handleInputChange} className="input-primary" placeholder="Ex: apreciação urgente em 48 horas" />
         </div>
         <div>
-          <label className="block text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 font-medium mb-2">Local (opcional)</label>
+          <label className="block text-xs uppercase tracking-wide text-slate-900 dark:text-white font-medium mb-2">Local (opcional)</label>
           <input type="text" name="local" value={formData.local} onChange={handleInputChange} className="input-primary" placeholder="Ex: Petrópolis/RJ" />
         </div>
         <div className="md:col-span-2">
-          <label className="block text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 font-medium mb-2">Fundamentação Legal (opcional)</label>
+          <label className="block text-xs uppercase tracking-wide text-slate-900 dark:text-white font-medium mb-2">Fundamentação Legal (opcional)</label>
           <textarea name="legalBasis" value={formData.legalBasis} onChange={handleInputChange} className="input-primary" rows={3} placeholder="Artigos de lei e referências, quando aplicável" />
         </div>
         <div className="md:col-span-2">
-          <label className="block text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 font-medium mb-2">Documentos (Opcional - Máximo 3 arquivos)</label>
+          <label className="block text-xs uppercase tracking-wide text-slate-900 dark:text-white font-medium mb-2">Documentos (Opcional - Máximo 10 arquivos)</label>
 
           {/* Área de Upload no mesmo estilo da Petição Inicial */}
           <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 text-center hover:border-gray-400 transition-colors">
@@ -417,6 +436,9 @@ export default function PeticaoSimplesWizard({ onCancel }) {
             </label>
           </div>
 
+          {uploadError && (
+            <p className="text-red-700 text-xs mt-2">{uploadError}</p>
+          )}
           {/* Lista de Arquivos Selecionados */}
           {formData.attachments && formData.attachments.length > 0 && (
             <div className="mt-4 space-y-2">
@@ -449,11 +471,14 @@ export default function PeticaoSimplesWizard({ onCancel }) {
         <button onClick={nextStep} className="btn-primary px-6 py-3 flex items-center justify-center" disabled={isLoadingNextStep}>
           {isLoadingNextStep ? (
             <>
-              <Loader2 className="h-4 w-4 animate-spin mr-2" />
-              Processando (20s)...
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+              Processando...
             </>
           ) : (
-            'Avançar →'
+            <>
+              <Wand2 className="h-4 w-4 mr-2" />
+              Gerar com IA
+            </>
           )}
         </button>
       </div>
@@ -515,6 +540,9 @@ export default function PeticaoSimplesWizard({ onCancel }) {
           📄 Gerar Documento
         </button>
       </div>
+      {docxError && (
+        <div className="mt-2 text-red-700 text-xs text-right">{docxError}</div>
+      )}
     </div>
   );
 

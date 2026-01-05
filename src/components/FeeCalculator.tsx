@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Calculator, DollarSign, Clock, Scale, FileText, TrendingUp, Info, Edit3, Check, X, RotateCcw, Plus, Trash2, GripVertical } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Calculator, DollarSign, Clock, Scale, FileText, TrendingUp, Edit3, Check, RotateCcw, Plus, Trash2, GripVertical } from 'lucide-react';
 import {
   DndContext,
   closestCenter,
@@ -19,7 +19,7 @@ import {
   useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import Tooltip from './Tooltip';
+ 
 
 // Componente SortableItem para drag and drop
 interface SortableItemProps {
@@ -156,7 +156,7 @@ export default function FeeCalculator() {
   
   // Estados para edição de áreas jurídicas
   const [editingCaseTypes, setEditingCaseTypes] = useState(false);
-  const [editingCaseTypeId, setEditingCaseTypeId] = useState<string | null>(null);
+  
   const [newCaseType, setNewCaseType] = useState({ name: '', description: '', baseRate: 0 });
   const [showAddForm, setShowAddForm] = useState(false);
   
@@ -172,8 +172,7 @@ export default function FeeCalculator() {
     }
     return caseTypes.reduce((acc, type) => ({ ...acc, [type.id]: type.baseRate }), {});
   });
-  const [editingRates, setEditingRates] = useState(false);
-  const [editingCaseValue, setEditingCaseValue] = useState(false);
+  
   const [editingComplexity, setEditingComplexity] = useState(false);
   const [editingTime, setEditingTime] = useState(false);
   const [editingRisk, setEditingRisk] = useState(false);
@@ -218,7 +217,7 @@ export default function FeeCalculator() {
   const [editableRiskMultiplier, setEditableRiskMultiplier] = useState(selectedRisk.multiplier);
   const [editablePercentage, setEditablePercentage] = useState(10);
 
-  const calculateFee = () => {
+  const calculateFee = useCallback(() => {
     const baseValue = editableCaseTypeRates[selectedCaseType.id];
     
     // Usar multiplicadores editados individuais se disponíveis, senão usar os padrões
@@ -257,7 +256,7 @@ export default function FeeCalculator() {
       totalFee,
       suggestedRange
     });
-  };
+  }, [editableCaseTypeRates, selectedCaseType, editableComplexityMultipliers, selectedComplexity, editableComplexityMultiplier, editableTimeMultipliers, selectedTime, editableTimeMultiplier, editableRiskMultipliers, selectedRisk, editableRiskMultiplier, caseValue, editablePercentage]);
 
   // Sincronizar valores editáveis quando as seleções mudarem
   useEffect(() => {
@@ -297,7 +296,7 @@ export default function FeeCalculator() {
 
   useEffect(() => {
     calculateFee();
-  }, [selectedCaseType, selectedComplexity, selectedTime, selectedRisk, caseValue, editableCaseTypeRates, editableComplexityMultiplier, editableTimeMultiplier, editableRiskMultiplier, editablePercentage]);
+  }, [calculateFee]);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -306,11 +305,7 @@ export default function FeeCalculator() {
     }).format(value);
   };
 
-  const resetToDefaultRates = () => {
-    const defaultRates = caseTypes.reduce((acc, type) => ({ ...acc, [type.id]: type.baseRate }), {});
-    setEditableCaseTypeRates(defaultRates);
-    setEditingRates(false);
-  };
+  
 
   const handleRateChange = (typeId: string, value: string) => {
     // Remove caracteres não numéricos
@@ -684,7 +679,7 @@ export default function FeeCalculator() {
                     onChange={(e) => {
                       const inputValue = e.target.value;
                       // Remove tudo exceto números, vírgulas e pontos
-                      let cleanValue = inputValue.replace(/[^0-9.,]/g, '');
+                      const cleanValue = inputValue.replace(/[^0-9.,]/g, '');
                       
                       // Separa a parte inteira da decimal (se houver vírgula)
                       const parts = cleanValue.split(',');

@@ -1,12 +1,12 @@
-import React, { useState, useEffect } from 'react';
-import { Search, FileText, Calendar, MapPin, Users, AlertCircle, Loader2, Folder, RefreshCw, Scale, Clock, Eye, EyeOff, Archive, Building, Gavel, User, ChevronRight, Trash2, CheckCircle } from 'lucide-react';
-import { FiltroProcesso } from '../types/database';
+import React, { useState } from 'react';
+import { Search, FileText, Calendar, Users, AlertCircle, Loader2, RefreshCw, Scale, Clock, Trash2, CheckCircle } from 'lucide-react';
 import { useFiltroProcessos } from '../hooks/useFiltroProcessos';
 import PageHeader from './PageHeader';
 
 const ProcessFilter: React.FC = () => {
   const { processos, loading, error, refetch, searchProcessos, deleteProcesso } = useFiltroProcessos();
   const [searchTerm, setSearchTerm] = useState('');
+  const [searchError, setSearchError] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [isSearching, setIsSearching] = useState(false);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
@@ -49,12 +49,12 @@ const ProcessFilter: React.FC = () => {
   // Função para buscar processo via webhook CNJ
   const handleCNJSearch = async () => {
     if (!searchTerm.trim()) {
-      alert('Por favor, digite um número CNJ válido');
+      setSearchError('Por favor, digite um número CNJ válido');
       return;
     }
 
     if (!validateCNJFormat(searchTerm)) {
-      alert('Formato de número CNJ inválido. Use o formato: NNNNNNN-DD.AAAA.J.TR.OOOO');
+      setSearchError('Formato de número CNJ inválido. Use o formato: NNNNNNN-DD.AAAA.J.TR.OOOO');
       return;
     }
 
@@ -104,15 +104,7 @@ const ProcessFilter: React.FC = () => {
     }
   };
 
-  // Função para formatar data
-  const formatarData = (data: string): string => {
-    if (!data) return 'N/A';
-    try {
-      return new Date(data).toLocaleDateString('pt-BR');
-    } catch {
-      return data;
-    }
-  };
+  
 
   // Função para obter cor do status
   const getStatusColor = (situacao: string) => {
@@ -185,13 +177,16 @@ const ProcessFilter: React.FC = () => {
                 <input
                   type="text"
                   value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onChange={(e) => { setSearchTerm(e.target.value); setSearchError(''); }}
                   onFocus={() => setIsSearchFocused(true)}
                   onBlur={() => setIsSearchFocused(false)}
                   placeholder="Digite o número CNJ (ex: 1234567-89.2023.1.01.0001)"
                   className="input-primary input-search transition-all duration-200"
                   style={{ paddingLeft: isSearchFocused ? '20px' : '34px' }}
                 />
+                {searchError && (
+                  <p className="text-red-700 text-xs mt-1">{searchError}</p>
+                )}
               </div>
             </div>
             <div className="flex gap-3">

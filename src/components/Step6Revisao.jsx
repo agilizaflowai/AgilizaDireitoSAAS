@@ -468,7 +468,7 @@ export default function Step6Revisao({ data, updateForm, prevStep, onSubmit }) {
       )}
       
       <div className="flex justify-between mt-8">
-        <button type="button" className="btn-secondary" onClick={prevStep}>Voltar</button>
+        <button type="button" className="btn-secondary" onClick={prevStep}>Voltar para Dados</button>
         <button 
           type="button" 
           className="bg-black text-white px-6 py-3 rounded-lg font-medium hover:bg-gray-800 transition-colors"

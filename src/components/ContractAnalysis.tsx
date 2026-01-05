@@ -1,10 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Upload, FileSearch, AlertTriangle, CheckCircle, XCircle, Download, BarChart3, Shield, Calendar, RefreshCw, FileText, Trash2 } from 'lucide-react';
+import { Upload, FileSearch, AlertTriangle, CheckCircle, XCircle, BarChart3, Shield, RefreshCw, FileText, Trash2 } from 'lucide-react';
 import PageHeader from './PageHeader';
 
 import { supabase } from '../supabaseClient';
 import { useContracts, type Contract } from '../hooks/useContracts';
-import { useApp } from '../contexts/AppContext';
+ 
 
 interface UploadedFile {
   name: string;
@@ -12,52 +12,25 @@ interface UploadedFile {
   type: string;
 }
 
-interface ContractData {
-  classificacao: number;
-  riscos_identificados: any[];
-  melhorias_sugeridas: any[];
-  conformidades_ok: any[];
-}
+ 
 
-interface ContractHistoryItem {
-  id: string;
-  nome_contrato: string;
-  score_total: number;
-  classificacao: string;
-  riscos_identificados: any[];
-  melhorias_sugeridas: any[];
-  conformidades_ok: any[];
-  clausulas_risco: any[];
-  sugestoes_melhoria: any[];
-  conformidade_legal: any[];
-  created_at: string;
-  fileName: string;
-  date: string;
-  score: number;
-  status: string;
-  risks: number;
-  improvements: number;
-  compliances: number;
-  riskClauses: string[];
-  improvementSuggestions: string[];
-  legalCompliance: string[];
-}
 
 export default function ContractAnalysis() {
   const [uploadedFile, setUploadedFile] = useState<UploadedFile | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [showAnalysis, setShowAnalysis] = useState(false);
+  
   const [isDragOver, setIsDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [contractSummary, setContractSummary] = useState<string | null>(null);
-  const [contractData, setContractData] = useState<ContractData | null>(null);
-  const [isLoadingData, setIsLoadingData] = useState(false);
-  const { contracts: contractHistory, loading: isLoadingHistory, error: historyError, refetch: refetchHistory, deleteContract } = useContracts();
+  
+  const { contracts: contractHistory, loading: isLoadingHistory, refetch: refetchHistory, deleteContract } = useContracts();
   const [selectedContract, setSelectedContract] = useState<Contract | null>(null);
   const [showContractDetails, setShowContractDetails] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const contractsPerPage = 10;
-  const { dispatch } = useApp();
+  
+  const refreshTimeoutRef = useRef<number | null>(null);
+  const [analysisError, setAnalysisError] = useState('');
+  const [deleteError, setDeleteError] = useState('');
   
   // Estados para modal de exclusão
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -66,144 +39,19 @@ export default function ContractAnalysis() {
   // Removido: seleção automática do primeiro contrato
 
   // Função para buscar dados do contrato no Supabase
-  const fetchContractData = async (fileName: string) => {
-    setIsLoadingData(true);
-    try {
-      console.log('Buscando dados do contrato no Supabase:', fileName);
-      
-      // Buscar o contrato mais recente
-      const { data, error } = await supabase
-        .from('contratos')
-        .select('classificacao, riscos_identificados, melhorias_sugeridas, conformidades_ok')
-        .limit(1)
-        .single();
+  
 
-      if (error) {
-        console.error('Erro ao buscar dados do contrato:', error);
-        return null;
-      }
 
-      // Parse dos campos JSON que vêm como strings do banco
-      const parsedData = {
-        ...data,
-        riscos_identificados: typeof data.riscos_identificados === 'string' 
-          ? JSON.parse(data.riscos_identificados) 
-          : data.riscos_identificados || [],
-        melhorias_sugeridas: typeof data.melhorias_sugeridas === 'string' 
-          ? JSON.parse(data.melhorias_sugeridas) 
-          : data.melhorias_sugeridas || [],
-        conformidades_ok: typeof data.conformidades_ok === 'string' 
-          ? JSON.parse(data.conformidades_ok) 
-          : data.conformidades_ok || []
-      };
+  
 
-      console.log('Dados do contrato encontrados:', parsedData);
-      return parsedData;
-    } catch (error) {
-      console.error('Erro na busca do contrato:', error);
-      return null;
-    } finally {
-      setIsLoadingData(false);
-    }
-  };
-
-  // Função para inserir dados de teste
-  const insertTestData = async () => {
-    console.log('=== INICIANDO INSERÇÃO DE DADOS DE TESTE ===');
-    const testData = {
-      nome_contrato: 'Contrato de Teste - Análise Completa',
-      score_total: 85,
-      classificacao: 'Médio Risco',
-      riscos_identificados: JSON.stringify([
-        {
-          titulo: 'Cláusula de Penalidade Excessiva',
-          descricao: 'Multa de 50% do valor do contrato em caso de rescisão',
-          nivel: 'alto'
-        },
-        {
-          titulo: 'Prazo de Pagamento Inadequado',
-          descricao: 'Prazo de 90 dias para pagamento pode gerar problemas de fluxo de caixa',
-          nivel: 'medio'
-        },
-        {
-          titulo: 'Ausência de Cláusula de Força Maior',
-          descricao: 'Contrato não prevê situações de força maior',
-          nivel: 'baixo'
-        }
-      ]),
-      melhorias_sugeridas: JSON.stringify([
-        {
-          titulo: 'Incluir Cláusula de Reajuste',
-          descricao: 'Adicionar cláusula de reajuste anual baseada no IPCA',
-          prioridade: 'alta'
-        },
-        {
-          titulo: 'Definir Critérios de Qualidade',
-          descricao: 'Estabelecer métricas claras de qualidade dos serviços',
-          prioridade: 'media'
-        }
-      ]),
-      conformidades_ok: JSON.stringify([
-        {
-          titulo: 'Lei Geral de Proteção de Dados',
-          descricao: 'Contrato está em conformidade com a LGPD',
-          status: 'conforme'
-        },
-        {
-          titulo: 'Código de Defesa do Consumidor',
-          descricao: 'Cláusulas respeitam os direitos do consumidor',
-          status: 'conforme'
-        },
-        {
-          titulo: 'Legislação Trabalhista',
-          descricao: 'Disposições trabalhistas estão adequadas',
-          status: 'conforme'
-        }
-      ]),
-      clausulas_risco: JSON.stringify([
-        {
-          clausula: 'Cláusula 5.2 - Penalidades',
-          risco: 'Alto',
-          descricao: 'Multa excessiva pode ser considerada abusiva'
-        }
-      ]),
-      sugestoes_melhoria: JSON.stringify([
-        {
-          secao: 'Pagamentos',
-          sugestao: 'Reduzir prazo de pagamento para 30 dias'
-        }
-      ]),
-      conformidade_legal: JSON.stringify([
-        {
-          lei: 'LGPD',
-          status: 'Conforme'
-        }
-      ])
-    };
-
-    try {
-      const { data, error } = await supabase
-        .from('contratos')
-        .insert([testData])
-        .select();
-
-      if (error) {
-        console.error('Erro ao inserir dados de teste:', error);
-      } else {
-        console.log('Dados de teste inseridos com sucesso:', data);
-        // Recarregar histórico após inserir dados de teste
-        await refetchHistory();
-      }
-    } catch (err) {
-      console.error('Erro:', err);
-    }
-  };
-
-  // Carregar histórico de contratos ao montar o componente
+  // Cleanup do timeout quando desmontar
   useEffect(() => {
-    refetchHistory();
-    // Inserir dados de teste na primeira execução (comentar após teste)
-    // insertTestData();
+    return () => {
+      if (refreshTimeoutRef.current) {
+        clearTimeout(refreshTimeoutRef.current);
+        refreshTimeoutRef.current = null;
+      }
+    };
   }, []);
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -293,7 +141,7 @@ export default function ContractAnalysis() {
 
       // Seleciona URL do webhook: proxy em dev, absoluto em produção
       const defaultWebhook = 'https://n8n-n8n.04qisd.easypanel.host/webhook/juridico/analise-de-contratos';
-      const envWebhook = (import.meta as any).env?.VITE_WEBHOOK_CONTRATOS_URL;
+      const envWebhook = import.meta.env?.VITE_WEBHOOK_CONTRATOS_URL;
       const isLocalhost = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
       const webhookUrl = envWebhook || (isLocalhost ? '/api/webhook' : defaultWebhook);
       
@@ -329,12 +177,29 @@ export default function ContractAnalysis() {
 
       const analysisResult = await response.json();
       console.log('Resposta do webhook n8n:', analysisResult);
-      setContractSummary('Contrato enviado para análise com sucesso!');
-      setShowAnalysis(true);
-      setIsLoadingData(false);
+      
       
       // Recarregar histórico após nova análise
       await refetchHistory();
+
+      // Agendar busca da última linha após 20s e atualizar lista automaticamente
+      if (refreshTimeoutRef.current) {
+        clearTimeout(refreshTimeoutRef.current);
+      }
+      refreshTimeoutRef.current = window.setTimeout(async () => {
+        try {
+          const { error } = await supabase
+            .from('contratos')
+            .select('id')
+            .order('id', { ascending: false })
+            .limit(1);
+          if (!error) {
+            await refetchHistory();
+          }
+        } catch (e) {
+          console.warn('Falha ao atualizar histórico pós-análise:', e);
+        }
+      }, 20000);
     } catch (error) {
       console.error('Erro na integração com n8n:', error);
       setIsLoadingData(false); // Parar o loading em caso de erro
@@ -351,7 +216,7 @@ export default function ContractAnalysis() {
         errorMessage = error.message;
       }
       
-      alert(`Falha ao conectar com o webhook do n8n: ${errorMessage}`);
+      setAnalysisError(`Falha ao conectar com o webhook do n8n: ${errorMessage}`);
       setShowAnalysis(false);
     } finally {
       setIsAnalyzing(false);
@@ -387,23 +252,7 @@ export default function ContractAnalysis() {
     return 'stroke-red-600';
   };
 
-  const getRiskColor = (risk: string) => {
-    switch (risk) {
-      case 'Alto': return 'text-red-700 bg-red-50 border-red-200';
-      case 'Médio': return 'text-amber-700 bg-amber-50 border-amber-200';
-      case 'Baixo': return 'text-emerald-700 bg-emerald-50 border-emerald-200';
-      default: return 'text-gray-700 bg-gray-50 border-gray-200';
-    }
-  };
-
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'Alta': return 'text-red-700 bg-red-100 border-red-300';
-      case 'Média': return 'text-amber-700 bg-amber-100 border-amber-300';
-      case 'Baixa': return 'text-emerald-700 bg-emerald-100 border-emerald-300';
-      default: return 'text-gray-300 bg-gray-800/30 border-gray-600 dark:text-gray-300 dark:bg-gray-800/30 dark:border-gray-600';
-    }
-  };
+  
 
   return (
     <div className="space-y-6">
@@ -524,8 +373,7 @@ export default function ContractAnalysis() {
             <div className="space-y-3">
               {(() => {
                 // Calcular contratos da página atual
-                const totalContracts = contractHistory.length;
-                const totalPages = Math.ceil(totalContracts / contractsPerPage);
+                
                 const startIndex = (currentPage - 1) * contractsPerPage;
                 const endIndex = startIndex + contractsPerPage;
                 const currentContracts = contractHistory.slice(startIndex, endIndex);
@@ -573,7 +421,10 @@ export default function ContractAnalysis() {
                           </div>
                         </div>
                         <div className="flex-1 min-w-0">
-                          <h4 className="text-lg font-semibold text-gray-900 dark:text-white truncate">
+                          <h4
+                            className="text-lg font-semibold text-gray-900 dark:text-white break-words"
+                            style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}
+                          >
                             {contract.nome_contrato || 'Contrato sem nome'}
                           </h4>
                           {contract.created_at && !isNaN(new Date(contract.created_at).getTime()) && (
@@ -1280,9 +1131,10 @@ export default function ContractAnalysis() {
                         
                         // Se conformidade_legal é um array
                         if (Array.isArray(selectedContract.conformidade_legal) && selectedContract.conformidade_legal.length > 0) {
-                          const conformidade = selectedContract.conformidade_legal.find((conf: any) => {
+                          const conformidade = selectedContract.conformidade_legal.find((conf: Record<string, unknown>) => {
                             if (typeof conf === 'object' && conf !== null) {
-                              return conf[campo] === 'Conforme';
+                              const val = (conf as Record<string, unknown>)[campo];
+                              return typeof val === 'string' && val === 'Conforme';
                             }
                             return false;
                           });
@@ -1377,7 +1229,7 @@ export default function ContractAnalysis() {
                     setShowDeleteModal(false);
                     setContractToDelete(null);
                   } else {
-                    alert('Erro ao excluir contrato: ' + result.error);
+                    setDeleteError('Erro ao excluir contrato: ' + (result.error || 'Desconhecido'));
                   }
                 }}
                 className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-md transition-colors"
@@ -1386,6 +1238,14 @@ export default function ContractAnalysis() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+      {analysisError && (
+        <div className="mt-4 text-red-700 text-xs">{analysisError}</div>
+      )}
+      {showDeleteModal && deleteError && (
+        <div className="fixed inset-0 flex items-center justify-center pointer-events-none">
+          <div className="absolute bottom-6 text-red-700 text-xs bg-white dark:bg-gray-800 px-4 py-2 rounded shadow border border-gray-200 dark:border-gray-700">{deleteError}</div>
         </div>
       )}
     </div>

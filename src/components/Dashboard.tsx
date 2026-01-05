@@ -4,25 +4,32 @@ import {
   Users, 
   FileText, 
   Target, 
-  TrendingUp, 
   AlertTriangle, 
-  Activity,
   RefreshCw,
-  CheckCircle,
   ArrowUp,
   ArrowDown,
   Calendar,
   Clock,
-  BarChart3,
-  Shield
+  PieChart as PieChartIcon
 } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import PageHeader from './PageHeader';
 import ClientsEvolutionChart from './ClientsEvolutionChart';
 import SimpleAgenda from './SimpleAgenda';
-import ActionMenu from './ActionMenu';
+ 
 import { useDashboardData } from '../hooks/useDashboardData';
+import { PieChart as RePieChart, Pie, Cell, Tooltip as ReTooltip, ResponsiveContainer, Label } from 'recharts';
 
-const MetricCard = ({ title, value, subtitle, icon: Icon, trend, trendDirection }: any) => (
+interface MetricCardProps {
+  title: string;
+  value: number | string;
+  subtitle: string;
+  icon: LucideIcon;
+  trend?: number;
+  trendDirection?: 'up' | 'down';
+}
+
+const MetricCard = ({ title, value, subtitle, icon: Icon, trend, trendDirection }: MetricCardProps) => (
   <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 shadow-sm hover:shadow-md transition-shadow">
     <div className="flex items-center justify-between mb-3">
       <div className="flex items-center">
@@ -53,33 +60,64 @@ const MetricCard = ({ title, value, subtitle, icon: Icon, trend, trendDirection 
   </div>
 );
 
-const CustomTooltip = ({ active, payload, label }: any) => {
-  if (active && payload && payload.length) {
-    return (
-      <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-sm p-3">
-        <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">{`${label}`}</p>
-        <p className="text-sm font-semibold text-slate-900 dark:text-white">
-          {`${payload[0].value} clientes`}
-        </p>
-      </div>
-    );
-  }
-  return null;
-};
+ 
 
 export default function Dashboard() {
   const { metrics, loading, error, refetch } = useDashboardData();
 
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'URGENTE':
-        return 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400';
-      case 'ATENÇÃO':
-        return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400';
-      default:
-        return 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400';
+  const totalContracts = metrics.totalContratos;
+  const contractPieData = [
+    { name: 'Seguro', value: metrics.contractsStatus.seguro, color: '#10B981' },
+    { name: 'Atenção Necessária', value: metrics.contractsStatus.atencaoNecessaria, color: '#F59E0B' },
+    { name: 'Alto Risco', value: metrics.contractsStatus.altoRisco, color: '#EF4444' },
+    { name: 'Outros', value: metrics.contractsStatus.outros, color: '#6B7280' },
+  ].filter(d => d.value > 0);
+
+  const ContractsPieTooltip = ({ active, payload }: { active?: boolean; payload?: Array<{ payload: { name: string; value: number } }> }) => {
+    if (active && payload && payload.length) {
+      const d = payload[0].payload as { name: string; value: number };
+      const pct = totalContracts > 0 ? Math.round((d.value / totalContracts) * 100) : 0;
+      return (
+        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-sm p-3">
+          <p className="text-sm font-semibold text-slate-900 dark:text-white">{d.name}</p>
+          <p className="text-xs text-gray-600 dark:text-gray-400">{`${d.value} (${pct}%)`}</p>
+        </div>
+      );
     }
+    return null;
   };
+
+  const renderCustomizedLabel = ({ cx, cy, midAngle, outerRadius, percent, index, value }: { cx: number; cy: number; midAngle: number; outerRadius: number; percent: number; index: number; value: number }) => {
+    const RADIAN = Math.PI / 180;
+    
+    // Pontos para a linha de conexão
+    const sin = Math.sin(-midAngle * RADIAN);
+    const cos = Math.cos(-midAngle * RADIAN);
+    const sx = cx + (outerRadius + 0) * cos;
+    const sy = cy + (outerRadius + 0) * sin;
+    const mx = cx + (outerRadius + 30) * cos;
+    const my = cy + (outerRadius + 30) * sin;
+    const ex = mx + (cos >= 0 ? 1 : -1) * 40; // Linha horizontal maior
+    const ey = my;
+
+    // Ajuste do texto para começar na "quina" (mx) e ir para fora
+    const textAnchor = cos >= 0 ? 'start' : 'end';
+    const xText = mx + (cos >= 0 ? 1 : -1) * 5; // Leve recuo da quina
+
+    return (
+      <g>
+        <path d={`M${sx},${sy}L${mx},${my}L${ex},${ey}`} stroke={contractPieData[index].color} fill="none" />
+        <text x={xText} y={ey} dy={-6} textAnchor={textAnchor} fill="#6b7280" fontSize={12} className="dark:fill-gray-400">
+          {`${value} peças`}
+        </text>
+        <text x={xText} y={ey} dy={16} textAnchor={textAnchor} fill="#111827" fontSize={16} fontWeight="bold" className="dark:fill-white">
+          {`${(percent * 100).toFixed(0)}%`}
+        </text>
+      </g>
+    );
+  };
+
+  
 
   if (error) {
     return (
@@ -165,7 +203,7 @@ export default function Dashboard() {
         <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 shadow-sm">
           <div className="flex items-center mb-6">
             <div className="p-3 rounded-lg bg-gray-100 dark:bg-gray-700 mr-3">
-              <BarChart3 className="h-7 w-7 text-gray-700 dark:text-gray-300" strokeWidth={1.5} />
+              <PieChartIcon className="h-7 w-7 text-gray-700 dark:text-gray-300" strokeWidth={1.5} />
             </div>
             <div>
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Contratos Analisados</h3>
@@ -182,106 +220,54 @@ export default function Dashboard() {
                 ))}
               </div>
             ) : metrics.totalContratos > 0 ? (
-               <div className="space-y-6">
-                 {/* Estatística Principal */}
-                 <div className="text-center py-6 bg-gray-50 dark:bg-gray-700/30 rounded-lg border border-gray-200 dark:border-gray-600">
-                   <div className="text-4xl font-bold text-slate-900 dark:text-white mb-2">
-                     {metrics.totalContratos}
-                   </div>
-                   <p className="text-gray-600 dark:text-gray-400 font-medium">Contratos processados</p>
-                 </div>
-                 
-                 {/* Breakdown Detalhado */}
-                 <div className={metrics.totalContratos === 1 ? "flex justify-center" : "grid grid-cols-2 gap-4"}>
-                   {/* Contratos Seguros */}
-                   {metrics.contractsStatus.seguro > 0 && (
-                     <div className={`bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-600 shadow-sm ${metrics.totalContratos === 1 ? 'mx-auto w-[calc(50%-0.5rem)]' : ''}`}>
-                       <div className="flex items-center justify-between mb-2">
-                         <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Seguro</span>
-                         <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
-                       </div>
-                       <div className="text-2xl font-bold text-slate-900 dark:text-white">{metrics.contractsStatus.seguro}</div>
-                       <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                         {metrics.totalContratos > 0 ? Math.round((metrics.contractsStatus.seguro / metrics.totalContratos) * 100) : 0}% do total
-                       </div>
-                     </div>
-                   )}
-                   
-                   {/* Contratos com Atenção Necessária */}
-                   {metrics.contractsStatus.atencaoNecessaria > 0 && (
-                     <div className={`bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-600 shadow-sm ${metrics.totalContratos === 1 ? 'mx-auto w-[calc(50%-0.5rem)]' : ''}`}>
-                       <div className="flex items-center justify-between mb-2">
-                         <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Atenção Necessária</span>
-                         <div className="w-2 h-2 bg-amber-500 rounded-full"></div>
-                       </div>
-                       <div className="text-2xl font-bold text-slate-900 dark:text-white">{metrics.contractsStatus.atencaoNecessaria}</div>
-                       <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                         {metrics.totalContratos > 0 ? Math.round((metrics.contractsStatus.atencaoNecessaria / metrics.totalContratos) * 100) : 0}% do total
-                       </div>
-                     </div>
-                   )}
-                   
-                   {/* Contratos de Alto Risco */}
-                   {metrics.contractsStatus.altoRisco > 0 && (
-                     <div className={`bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-600 shadow-sm ${metrics.totalContratos === 1 ? 'mx-auto w-[calc(50%-0.5rem)]' : ''}`}>
-                       <div className="flex items-center justify-between mb-2">
-                         <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Alto Risco</span>
-                         <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                       </div>
-                       <div className="text-2xl font-bold text-slate-900 dark:text-white">{metrics.contractsStatus.altoRisco}</div>
-                       <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                         {metrics.totalContratos > 0 ? Math.round((metrics.contractsStatus.altoRisco / metrics.totalContratos) * 100) : 0}% do total
-                       </div>
-                     </div>
-                   )}
-                   
-                   {/* Outros Status */}
-                   {metrics.contractsStatus.outros > 0 && (
-                     <div className={`bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-600 shadow-sm ${metrics.totalContratos === 1 ? 'mx-auto w-[calc(50%-0.5rem)]' : ''}`}>
-                       <div className="flex items-center justify-between mb-2">
-                         <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Outros</span>
-                         <div className="w-2 h-2 bg-gray-500 rounded-full"></div>
-                       </div>
-                       <div className="text-2xl font-bold text-slate-900 dark:text-white">{metrics.contractsStatus.outros}</div>
-                       <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                         {metrics.totalContratos > 0 ? Math.round((metrics.contractsStatus.outros / metrics.totalContratos) * 100) : 0}% do total
-                       </div>
-                     </div>
-                   )}
-                 </div>
-                 
-                 {/* Status Bar com cores baseadas na classificação */}
-                 <div className="bg-gray-100 dark:bg-gray-700 rounded-full h-2 overflow-hidden flex">
-                   {/* Barra verde para contratos seguros */}
-                   {metrics.contractsStatus.seguro > 0 && (
-                     <div 
-                       className="bg-emerald-500 h-full transition-all duration-300"
-                       style={{ width: `${metrics.totalContratos > 0 ? (metrics.contractsStatus.seguro / metrics.totalContratos) * 100 : 0}%` }}
-                     ></div>
-                   )}
-                   {/* Barra amarela para contratos com atenção necessária */}
-                   {metrics.contractsStatus.atencaoNecessaria > 0 && (
-                     <div 
-                       className="bg-amber-500 h-full transition-all duration-300"
-                       style={{ width: `${metrics.totalContratos > 0 ? (metrics.contractsStatus.atencaoNecessaria / metrics.totalContratos) * 100 : 0}%` }}
-                     ></div>
-                   )}
-                   {/* Barra vermelha para contratos de alto risco */}
-                   {metrics.contractsStatus.altoRisco > 0 && (
-                     <div 
-                       className="bg-red-500 h-full transition-all duration-300"
-                       style={{ width: `${metrics.totalContratos > 0 ? (metrics.contractsStatus.altoRisco / metrics.totalContratos) * 100 : 0}%` }}
-                     ></div>
-                   )}
-                   {/* Barra cinza para outros status */}
-                   {metrics.contractsStatus.outros > 0 && (
-                     <div 
-                       className="bg-gray-500 h-full transition-all duration-300"
-                       style={{ width: `${metrics.totalContratos > 0 ? (metrics.contractsStatus.outros / metrics.totalContratos) * 100 : 0}%` }}
-                     ></div>
-                   )}
-                 </div>
-               </div>
+              <div className="space-y-6">
+                <div className="h-96">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <RePieChart margin={{ top: 20, right: 80, bottom: 20, left: 80 }}>
+                      <Pie
+                        data={contractPieData}
+                        dataKey="value"
+                        nameKey="name"
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={70}
+                        outerRadius={100}
+                        paddingAngle={2}
+                        label={renderCustomizedLabel}
+                        labelLine={false} // Usamos nossa própria linha no renderCustomizedLabel
+                      >
+                        {contractPieData.map((entry, index) => (
+                          <Cell key={`slice-${index}`} fill={entry.color} />
+                        ))}
+                        <Label
+                          value="Total"
+                          position="center"
+                          dy={-10}
+                          className="text-sm fill-gray-500 dark:fill-gray-400 font-medium"
+                          style={{ fontSize: '14px' }}
+                        />
+                        <Label
+                          value={metrics.totalContratos}
+                          position="center"
+                          dy={20}
+                          className="text-4xl font-bold fill-slate-900 dark:fill-white"
+                          style={{ fontSize: '36px', fontWeight: 'bold' }}
+                        />
+                      </Pie>
+                      <ReTooltip content={<ContractsPieTooltip />} />
+                    </RePieChart>
+                  </ResponsiveContainer>
+                </div>
+
+                <div className="flex flex-wrap justify-center gap-6 mt-4">
+                  {contractPieData.map((entry) => (
+                    <div key={entry.name} className="flex items-center">
+                      <div className="w-3 h-3 rounded-full mr-2" style={{ backgroundColor: entry.color }}></div>
+                      <span className="text-sm font-medium text-gray-600 dark:text-gray-400">{entry.name}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
             ) : (
               <div className="text-center py-12 bg-gray-50 dark:bg-gray-700/30 rounded-lg border border-gray-200 dark:border-gray-600">
                 <FileText className="h-16 w-16 text-gray-400 mx-auto mb-4" />

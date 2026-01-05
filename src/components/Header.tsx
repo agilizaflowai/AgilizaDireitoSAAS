@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { LogOut, Bell, Search, Command, Sun, Moon } from 'lucide-react';
+import { LogOut, Search, Sun, Moon } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
 import { useTheme } from '../contexts/ThemeProvider';
 
@@ -29,9 +29,7 @@ export default function Header() {
     logout();
   };
 
-  const toggleSearch = () => {
-    setShowSearch(!showSearch);
-  };
+  
 
   // Filtrar páginas baseado no termo de busca
   const filteredPages = menuItems.filter(item => {
